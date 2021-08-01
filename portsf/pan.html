@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>ステレオパン</title>
+<meta http-equive="content-type" charset="utf-8">
+<link rel="stylesheet" href="/css/hljs.css">
+<link rel="icon" href="/img/favicon.ico">
+</head>
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/tomorrow-night-blue.min.css">
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/highlight.min.js"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+<body>
+  <p><a href="./">戻る</a>
+<h1>ステレオパン</h1>
+<p>May 22, 2020
+<h2>linear pan</h2>
+<p> linear panが一番簡単で実際に試してみると良いだろう. breakpointsライブラリを使う. 
+<p> breakpointsライブラリの機能で使っているのは次の二つの関数だけだ.
+<pre>
+<code>
+BREAKPOINT* get_breakpoints(FILE* fp, unsigned long* psize);
+int	inrange(const BREAKPOINT* points,double minval,double maxval,unsigned long npoints);
+</code>
+</pre>
+
+<p> このステレオパンは.brkファイルで指定したbreakpointを元にモノラルwavにパンの処理をかけたものを出力する. 
+<pre>
+<code>
+#include &ltstdio.h&gt
+#include &ltstdlib.h&gt
+#include &ltmath.h&gt
+#include &ltportsf.h&gt
+#include &ltbreakpoints.h&gt
+
+/* set size of multi-channel frame-buffer */
+#define NFRAMES (1024)
+
+/* TODO define program argument list, excluding flags */
+enum {ARG_PROGNAME,ARG_INFILE,ARG_OUTFILE,ARG_BRKFILE,ARG_NARGS};
+typedef struct panpos {
+  double left;
+  double right;
+} PANPOS;
+
+PANPOS simplepan(double position)
+{
+  PANPOS pos;
+
+  position *= 0.5;
+  pos.left = position - 0.5;
+  pos.right = position + 0.5;
+  return pos;
+}
+
+int main(int argc, char* argv[])
+{
+  /* STAGE 1 */	
+  PSF_PROPS inprops,outprops;									
+  long framesread;	
+  /* init all dynamic resources to default states */
+  int infile = -1,outfile = -1;
+  int error = 0;
+  PSF_CHPEAK* peaks = NULL;	
+  psf_format outformat =  PSF_FMT_UNKNOWN;
+  unsigned long nframes = NFRAMES;
+  float* inframe = NULL;
+  float* outframe = NULL;
+
+  PANPOS pos;
+  FILE* fp = NULL;
+  unsigned long size;
+  BREAKPOINT* points = NULL;
+  /* TODO: define an output frame buffer if channel width different 	*/
+
+  /* STAGE 2 */	
+  printf("MAIN: generic process\n");						
+
+  /* process any optional flags: remove this block if none used! */
+  if(argc &gt 1){
+    char flag;
+    while(argv[1][0] == '-'){
+      flag = argv[1][1];
+      switch(flag){
+        /*TODO: handle any  flag arguments here */
+        case('\0'):
+          printf("Error: missing flag name\n");
+          return 1;
+        default:
+          break;
+      }
+      argc--;
+      argv++;
+    }
+  }
+
+  /* check rest of commandline */
+  if(argc &lt ARG_NARGS){
+    printf("insufficient arguments.\n"
+        /* TODO: add required usage message */
+        "usage: MAIN infile outfile posfile.brk\n"
+        "\tposfile.brk is breakpoint file"
+        "with values in range -1.0 &lt= pos &lt= 1.0\n"
+        "where -1.0 = full Leeft, 0 = Centre, +1.0 + full Right"
+        );
+    return 1;
+  }
+  fp = fopen(argv[ARG_BRKFILE], "r");
+  if(fp == NULL){
+    printf("Error: unable to open"
+        "breakpoint file %s\n", argv[ARG_BRKFILE]);
+    error++;
+    goto exit;
+  }
+  points = get_breakpoints(fp, &size);
+
+  /*  always startup portsf */
+  if(psf_init()){
+    printf("unable to start portsf\n");
+    return 1;
+  }
+  /* we require breakpoints to start from 0 */
+  if(points[0].time != 0.0){
+    printf("Error in breakpoint data: "
+        "first time must be 0.0\n");
+    error++;
+    goto exit;
+  }
+
+  if(!inrange(points,-1,1.0,size)){
+    printf("Error in breakpoin file: "
+        "values out of range -1 to +1 \n");
+    error++;
+    goto exit;
+  }
+  /* STAGE 3 */																							
+  infile = psf_sndOpen(argv[ARG_INFILE],&inprops,0);															  
+  if(infile &lt 0){
+    printf("Error: unable to open infile %s\n",argv[ARG_INFILE]);
+    error++;
+    goto exit;
+  }
+  /* TODO: verify infile format for this application */
+  if(inprops.chans != 1){
+    printf("Error: infile must be mono.\n");
+    error++;
+    goto exit;
+  }
+
+  /* allocate space for  sample frame buffer ...*/
+  inframe = (float*) malloc(nframes * inprops.chans * sizeof(float));
+  if(inframe==NULL){
+    puts("No memory!\n");
+    error++;
+    goto exit;
+  }
+  /* check file extension of outfile name, so we use correct output file format*/
+  outformat = psf_getFormatExt(argv[ARG_OUTFILE]);
+  if(outformat == PSF_FMT_UNKNOWN){
+    printf("outfile name %s has unknown format.\n"
+        "Use any of .wav, .aiff, .aif, .afc, .aifc\n",argv[ARG_OUTFILE]);
+    error++;
+    goto exit;
+  }
+  inprops.format = outformat;
+  outprops = inprops;
+  outprops.chans = 2;
+  /* STAGE 4 */												
+  /* TODO: any other argument processing and setup of variables, 		     
+     output buffer, etc., before creating outfile
+     */
+
+  /* handle outfile */
+  /* TODO:  make any changes to outprops here  */
+
+  peaks  =  (PSF_CHPEAK*) malloc(outprops.chans * sizeof(PSF_CHPEAK));
+  if(peaks == NULL){
+    puts("No memory!\n");
+    error++;
+    goto exit;
+  }
+
+  /* TODO: if outchans != inchans, allocate outframe, and modify main loop accordingly */
+  outframe = (float *)malloc(nframes * outprops.chans * sizeof(float));
+  if(outframe == NULL){
+    puts("No memory!\n");
+    error++;
+    goto exit;
+  }
+
+  outfile = psf_sndCreate(argv[ARG_OUTFILE],&outprops,0,1,PSF_CREATE_RDWR);
+  if(outfile &lt 0){
+    printf("Error: unable to create outfile %s\n",argv[ARG_OUTFILE]);
+    error++;
+    goto exit;
+  }
+  /* STAGE 5 */	
+  printf("processing....\n");								
+  /* TODO: init any loop-related variables */
+
+  double timeincr = 1.0 / inprops.srate;
+  double sampletime = 0.0;
+  int i, out_i;
+  double stereopos;
+  printf("outchan: %d", outprops.chans);
+
+  while ((framesread = psf_sndReadFloatFrames(infile,inframe,nframes)) &gt 0){
+
+    /* &lt--------  add buffer processing here ------&gt  */
+    for(i=0, out_i = 0; i &lt framesread; i++){
+      stereopos = val_at_brktime(points, size, sampletime);
+      pos = simplepan(stereopos);
+      outframe[out_i++] =
+        (float)(inframe[i]*pos.left);
+      outframe[out_i++] =
+        (float)(inframe[i]*pos.right);
+      sampletime += timeincr;
+    }
+    printf("i:%d, out_i:%d", i, out_i);
+
+    if(psf_sndWriteFloatFrames(outfile,outframe,framesread) != framesread){
+      printf("Error writing to outfile\n");
+      error++;
+      break;
+    }			
+  }
+
+  if(framesread &lt 0)	{
+    printf("Error reading infile. Outfile is incomplete.\n");
+    error++;
+  }
+  else
+    printf("Done: %d errors\n",error);
+  /* STAGE 6 */		
+  /* report PEAK values to user */							
+  if(psf_sndReadPeaks(outfile,peaks,NULL) &gt 0){
+    long i;
+    double peaktime;
+    printf("PEAK information:\n");	
+    for(i=0;i &lt inprops.chans;i++){
+      peaktime = (double) peaks[i].pos / (double) inprops.srate;
+      printf("CH %ld:\t%.4f at %.4f secs\n", i+1, peaks[i].val, peaktime);
+    }
+  }
+  /* STAGE 7 */	
+  /* do all cleanup  */    									
+exit:	 	
+  if(infile &gt= 0)
+    if(psf_sndClose(infile))
+      printf("%s: Warning: error closing infile %s\n",argv[ARG_PROGNAME],argv[ARG_INFILE]);
+  if(outfile &gt= 0)
+    if(psf_sndClose(outfile))
+      printf("%s: Warning: error closing outfile %s\n",argv[ARG_PROGNAME],argv[ARG_OUTFILE]);
+  if(inframe)
+    free(inframe);
+  if(outframe)
+    free(outframe);
+  if(peaks)
+    free(peaks);
+  /*TODO: cleanup any other resources */
+  if(points)
+    free(points);
+
+  psf_finish();
+  return error;
+}
+</code>
+</pre>
+
+<p> コンパイル, 使い方など. aaa.wavというモノラルwavを用意したとする. それとaaa.brkというbreakpointsファイルを用意し次のような内容だとする. これは0秒目は左, 1秒目に右, 2秒以降は左にパンされるbreakpointsだ.
+<pre>
+<code>
+0.0 -1.0
+1.0 1.0
+2.0 -1.0
+</code>
+</pre>
+
+<pre>
+<code>
+gcc -o sfbin.bin -lportsf -lbreakpoints sfpan.c
+./sfpan.bin aaa.wav aaa_out.wav aaa.brk
+</code>
+</pre>
+<p> これによってaaa_out.wavというステレオファイルが生成されaaa.brkを元にパンの処理が為されている. 
+
+<h2>constant-power pan</h2>
+<p> linear panで聴いた音は, 何か違和感を覚えないだろうか. panが中央に来たときに音が離れているように聞こえる. これは, 人間の体感音量は振幅でなく波のエネルギーに対応しており, 波エネルギーは振幅の二乗に比例する. よって左右からの音は振幅の二乗和に応じている事が理由となっている. panが中央の時のエネルギーは0.5^2 + 0.5^2 = 0.5 であり, 1^2 + 0^2 = 1 の場合の半分となっている. 
+<p> 線型変換では上の計算のようにエネルギーが変化してしまうので, エネルギーを固定してpanさせたい. 二乗和が1になるよう固定してみると, これは三角関数に対応する. simplepan関数の代わりに次のconstpower関数を使うことでこのpanが実現できる.
+<pre>
+<code>
+PANPOS constpower(double position){
+  PANPOS pos;
+  const double pi = atan(1.0) * 4;
+  double angle = position * pi * 0.25;
+  const double root2over2 = sqrt(2.0) * 0.5;
+
+  pos.left =  root2over2 * (cos(angle) - sin(angle));
+  pos.right = root2over2 * (cos(angle) + sin(angle));
+  return pos;
+}
+</code>
+</pre>
+<p> 実際に聞いてみると音の変化が自然で立体感が生まれる. 
+
+</body>
+</html>

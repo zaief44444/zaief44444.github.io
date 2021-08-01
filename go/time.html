@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Go言語時間操作解説</title>
+<meta http-equive="content-type" charset="utf-8">
+<link rel="stylesheet" href="/css/hljs.css">
+<link rel="icon" href="/img/favicon.ico">
+</head>
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/tomorrow-night-blue.min.css">
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/highlight.min.js"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+<body>
+<p><a href="./">戻る</a>
+<h1>Go言語時間操作解説</h1>
+<p> Nov 14, 2020
+<p> Go言語ではtimeパッケージでタイマーや, 時刻を取得できる. しかし時刻というのは意外に複雑でタイムゾーンや, 時刻の表示の仕方など様々なパターンを考えなくてはならない.
+<p> time.Now() では次のような形式で得られる. time.Now()はTime型を返す.
+<pre>
+<code>
+fmt.Println(time.Now())
+2020-11-14 09:06:34.476824231 +0900 JST m=+0.000046912
+</code>
+</pre>
+
+<p> この時間表示を使いたいマゾ以外は, Format()を使って自分の好きな形式を指定して時間の文字列を取得することになる.
+<p> func (t Time) Format(layout string) string
+<p> layoutには次の時刻を基準とした時刻表示を書く. 
+<pre>
+<code>
+Mon Jan 2 15:04:05 -0700 MST 2006
+2006年1月2日15時4分5秒MST時間(UTC - 7時間)
+</code>
+</pre>
+
+<p>MSTが基準になっているのが気になるが, 構わず日本時間とみなして形式を指定すれば日本時間が得られるはず.
+<pre>
+<code>
+fmt.Println(time.Now().Format("2006年01月02日15時4分5秒"));
+</code>
+</pre>
+
+<h2>曜日を取得する</h2>
+
+<p> Weekday型は次のようになっており, 0から6までのintだが, String()では"Sunday", "Monday", ... という文字列で取得できる. 
+<pre>
+<code>
+type Weekday int
+
+const (
+    Sunday Weekday = iota
+    Monday
+    Tuesday
+    Wednesday
+    Thursday
+    Friday
+    Saturday
+    )
+
+func (d Weekday) String() string
+</code>
+</pre>
+
+<p> 日本語で大丈夫なので, 次のmapで日本語を取得する.
+<pre>
+<code>
+var youbi = map[int]string{
+  0:"日",
+  1:"月",
+  2:"火",
+  3:"水",
+  4:"木",
+  5:"金",
+  6:"土",
+}
+
+fmt.Println(youbi[int(time.Now().Weekday())])
+
+</code>
+</pre>
+</body>
+</html>

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>NESエミュ開発</title>
+<meta http-equive="content-type" charset="utf-8">
+<link rel="icon" href="/img/favicon.ico">
+<link rel="stylesheet" href="/css/simple.css">
+</head>
+
+<body>
+<p><a href="./">戻る</a>
+<h1>NESエミュ開発</h1>
+<p> Oct 2, 2020
+<p> ゲームの解析をよく理解している人がどれぐらいなのかは予想がつかないが, 最低限CPUの命令は理解しているとしてAPU, PPUなどとの連携をどのように行っているかを理解するのは難しい. PSや64レベルのハードでは処理の量が多く解析が難しいが, SNESも独自のチップ搭載カートリッジが多く難しい. NESやGB, GBAはこれらに比べて比較的簡単なのでこれらのハードの動作を理解することで好きなハードの動作の理解につながるだろう. 
+<p> <a href="https://yizhang82.dev/nes-emu-overview">https://yizhang82.dev/nes-emu-overview</a> を参考.
+<h2>NESのスペック</h2>
+<p> 8bit 6502 CPU 1.79MHZ, A,X,Yレジスタ, P(ステータス), SP(Stack Pointer), PC(Program Counter)レジスタを持つ. 16bitのPCレジスタ以外は8bitだ.
+<p> PPU (Picture Processing Unit)は256x240ピクセル. 背景8x8のタイル, 最大64個の8x8, 8x16スプライトを使って描画される.  ピクセル単位のスクロール機能
+<p> APU (Audio Processing Unit) はパルスチャンネル2つ, 三角波1つ, ノイズ1つ, DMC(delta modulation)1つからなる. 
+<p> コントローラー
+<p> カートリッジ(and Mapper) <a href="http://wiki.nesdev.com/w/index.php/Cartridge_board_reference">http://wiki.nesdev.com/w/index.php/Cartridge_board_reference</a> を見ればわかるとおりカートリッジには多くのタイプがある. セーブができるROMはバッテリー付きのRAM, 拡張APU, Mapperはカートリッジの拡張された部分にアクセスするためのアドレス空間の割り当てを制御する. <a href="http://wiki.nesdev.com/w/index.php/Mapper">http://wiki.nesdev.com/w/index.php/Mapper</a>
+<p> 注意することは, romファイルはカートリッジの一部の情報に過ぎない. そのほかの機能はエミュレーター側が実装する必要がある. 具体的にはカートリッジが用意するMapperにしたがってカートリッジ専用の処理ルートを構築する. もちろん, Mapperはromではなく別のハードだ.
+<h2>実装の流れ</h2>
+<p> いきなり全てを実装するのは破綻するので, 次のような計画を考える.
+<p> 1. まずCPUの実装
+<p> 2. mapper0のNESに向けた実装. <a href="http://wiki.nesdev.com/w/index.php/Emulator_tests">http://wiki.nesdev.com/w/index.php/Emulator_tests</a> のテストを活用してバグを修正. 
+<p> 3. PPU実装. 
+<p> 4. mapper 0のゲームでテストする. ドンキーコングなどが良い.
+<p> 5. スクロール実装. <a href="http://wiki.nesdev.com/w/index.php/PPU_scrolling">http://wiki.nesdev.com/w/index.php/PPU_scrolling</a> を読む.
+<p> 6. スクロールテスト. まずYスクロールでテスト, アイスクライマーがよい.
+<p> 7. マリオブラザーズテスト. 
+<p> 8. APU実装.
+<p> 9. 他のmapper(MMC1, MMC3など)を実装.
+<p> 10. ゲーム独自の実装が必要になるものもある: <a href="http://wiki.nesdev.com/w/index.php/Tricky-to-emulate_games">http://wiki.nesdev.com/w/index.php/Tricky-to-emulate_games</a> 
+<p> 11. エミュレーターの機能を実装. デバッグ, ロード/セーブ, 巻き戻し/早送り, チートなど. 
+<h2>開発の助けになるもの</h2>
+<p> ログ機能は必ず実装する. 
+<p> Mesenというデバッガーを使う. <a href="https://www.mesen.ca/">https://www.mesen.ca/</a>
+
+
+<p> <a href="http://visual6502.org/">http://visual6502.org/</a>
+
+<p> <a href="https://medium.com/@fogleman/i-made-an-nes-emulator-here-s-what-i-learned-about-the-original-nintendo-2e078c9b28fe">I made an NES emulator. Here’s what I learned about the original Nintendo.</a>
+<p> <a href="http://nesdev.com/NESDoc.pdf">http://nesdev.com/NESDoc.pdf</a>
+</body>
+</html>

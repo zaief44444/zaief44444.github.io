@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>nginx解説</title>
+<meta http-equive="content-type" charset="utf-8">
+<link rel="icon" href="/img/favicon.ico">
+<link rel="stylesheet" href="/css/simple.css">
+</head>
+<body>
+<p><a href="./">戻る</a>
+<h1>nginx解説</h1>
+<p> Mar 7, 2020
+<p> あまり解説できるほど高度なことをしていないが, 自分用のメモとして. 
+<h2>Let's Encryptを使ったhttps対応</h2>
+<p>フリーで使えるCA(Certificate Agency)なのでドメインが正しいことを証明するがサイト自体の信用は証明しない. SEO対策ではhttpsは一定の効果がある. 正直無視できないレベルだと思われる. ただし中途半端に対応すると危険な接続だとブラウザ側に表示されてしまいかえってSEOに悪影響をもたらす. Let's Encryptの証明書の有効期限は3ヶ月であるからいちいち証明書を更新をしなくてはならないが, 自動で証明書を取得して更新することが推奨されている. 証明書の取得ではACMEプロトコルという新しいプロトコルを用いる. 証明書を取得するACMEクライエントとして, Certbotが推奨されている. Certbotのホームページ <a href="https://certbot.eff.org/">https://certbot.eff.org/</a> はとても親切で環境ごとにマニュアルを用意している. どのディストリビューションだろうがapacheだろうがnginxだろうが対応している. そこのサイトの指示に従えばいいが, ここでは自分用のメモとしてarch linux, nginx環境での操作を書く. 
+<p> Certbotをインストールする 
+<pre>
+<code>
+pacman -S certbot certbot-nginx
+</code>
+</pre>
+
+<p> certbotにより証明書取得, 設定を色々聞かれるので答えるだけ. 手っ取り早いがnginx.confを勝手に書き換えるところがあったりするので必ずnginx.confのバックアップはとっておくこと. certbot renewで証明書を更新できる.
+<pre>
+<code>
+certbot --nginx
+</code>
+</pre>
+
+<h2>証明書更新の自動化</h2>
+<p> certbotのマニュアルではcrontabによる自動化をさせるコマンド書いてあったが, systemdを使っているならsystemdのtimerを使って管理した方が一貫性があったり色々推奨されるらしい. 大して影響は無いと思うけど, 今回systemdのtimerを使う方法でやってみる. まずは/etc/systemd/system/certbot.serviceを作成し次のように記述する. --quietは標準出力には何も出力しない, --agree-tosは利用規約(Terms of Service)に同意するという意味. 
+<pre>
+<code>
+[Unit]
+Description=Let's Encrypt renewal
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/certbot renew --quiet --agree-tos
+
+[Install]
+WantedBy=multi-user.target
+</code>
+</pre>
+
+<p> service作成した後enableとしないとsystemdに登録されない. startする必要はない.
+<pre>
+<code>
+sudo systemctl enable certbot.service
+</code>
+</pre>
+
+<p> systemdはcrontabと違って.serviceとは別に.timerも作らなくてはならない. ここがやや不評な理由になっているがメリットもあるらしい. /etc/systemd/system/certbot.timerを作成し次のように記述する. 毎月1日に証明書を更新するという設定にした. OnCalendarの書式を解説すると, 前半は西暦-月-日 時:分:秒の順に当てはまる数字を書く. *とすると毎ということになる. 下記の内容の場合, 毎年, 毎月1日に実行することになる. 00:00:00は0時0分0秒に実行する, ということだ. しかし, RandomizedDelaySecで1h, つまり1時間この時間をずらして実行するように設定している. これは世界全体のあちこちのサーバーが一斉に証明書を取得しようとするきりの良い時間を避けるためだ. WantedByは親のtimer.targetが起動すると子も起動する, というようにするため. 
+<p>
+<pre>
+<code>
+[Unit]
+Description=Once a month renewal of Let's  Encrypt's certificates
+
+[Timer]
+OnCalendar=*-*-01 00:00:00
+RandomizedDelaySec=1h
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+</code>
+</pre>
+
+<p> serviceは
+<p> timerをenable, startする. 
+<pre>
+<code>
+systemctl enable /etc/systemd/system/certbot.timer
+systemctl start /etc/systemd/system/certbot.timer
+</code>
+</pre>
+
+<p> nginxでhttpからhttpsへリダイレクトさせる
+<pre>
+<code>
+server {
+  listen 80;
+  server_name zaief.jp;
+  return 301 https//$host$request_uri;
+}
+</code>
+</pre>
+<h2>参考</h2>
+<a href="https://wiki.archlinux.org/index.php/Certbot">https://wiki.archlinux.org/index.php/Certbot</a> やはりarchはドキュメントが充実している. 今回ほぼarchのwikiに従っている.
+</body>
+</html>

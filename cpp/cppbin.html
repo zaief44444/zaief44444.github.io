@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>C++によるバイナリファイル操作</title>
+<meta http-equive="content-type" charset="utf-8">
+<link rel="stylesheet" href="/css/hljs.css">
+<link rel="icon" href="/img/favicon.ico">
+</head>
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/tomorrow-night-blue.min.css">
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/highlight.min.js"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+<body>
+<p><a href="./">戻る</a>
+<h1>C++によるバイナリファイル操作</h1>
+<p> Dec 20, 2019
+<p> c++11以降のバイナリファイル操作についてまとめたい. やり方が皆バラバラでどういう方法を取ればいいのか骨となるものがなければ混乱する.
+<h2>tellp</h2>
+<p> std::basic_ostream::tellp 
+<p>  if fail () == true, it returns pos_type(-1). Otherwise, returns rdbuf()-&gtpubseeekoff(0, std::iosbase::cur, std::ios_base::out)
+<p> 引数なし, 返却型はpos_type
+<pre>
+<code>
+#include &ltiostream&gt
+#include &ltsstream&gt
+int main()
+{
+    std::ostringstream s;
+    std::cout &lt&lt s.tellp() &lt&lt '\n';
+    s &lt&lt 'h';
+    std::cout &lt&lt s.tellp() &lt&lt '\n';
+    s &lt&lt "ello, world ";
+    std::cout &lt&lt s.tellp() &lt&lt '\n';
+    s &lt&lt 3.14 &lt&lt '\n';
+    std::cout &lt&lt s.tellp() &lt&lt '\n' &lt&lt s.str();
+}
+</code>
+</pre>
+<p>出力:
+<pre>
+<code>
+0
+1
+13
+18
+hello, world 3.14
+</code>
+</pre>
+<h2>seekp</h2>
+<p> basic_ostream& seekp( pos_type pos ); (1)
+<p> basic_ostream& seekp( off_type off, std::ios_base::seekdir dir); (2)
+<p> (1) sets the output position indicator to absolute (relative to the beginning of the file) value pos by calling rdbuf()-&gtpubseekpos(pos, std::ios_base::out) . If the call returns (pos_type)-1, executes setstate(failbit) .
+<p> (2) sets the output position indicator to offset off relative to dir by calling rdbuf()-&gtpubseekoff(off, dir, std::ios_base::out) . If the call returns (pos_type)-1, executes setstate(failbit). (since C++14)
+<h3>引数</h3>
+<p> pos - absolute position to set the output position indicator to.
+<p> off - relative position to set the output position indicator to.
+<p> dir - defines base position to apply the relative offset to. It can be one of the following constants. beg : the beginning of a stream, end : the ending of a stream, cur : the current position of stream position indicator
+<h3>返却型</h3>
+<p>*this
+<h3>例外</h3>
+<p> (1) May throw std::ios_base::failure in case of failure, if exceptions() & failbit != 0
+<p> (2) Same as (1)
+<h3>例</h3>
+<pre>
+<code>
+#include &ltsstream&gt
+#include &ltiostream&gt
+
+int main()
+{
+  std::ostringstream os("hello, world");
+  os.seekp(7);
+  os &lt&lt 'W';
+  os.seekp(0, std::ios_base::end);
+  os &lt&lt '!';
+  os.seekp(0);
+  os &lt&lt 'H';
+  std::cout &lt&lt os.str() &lt&lt '\n';
+}
+</code>
+</pre>
+<p> 出力:
+<pre>
+<code>
+Hello, World!
+</code>
+</pre>
+
+<h2>tellg</h2>
+<p> std::basic_istream::tellg, pos_type tells(); return input position indicator of the current associated streambuf object. if fail() == true, returns pos_type(-1). Otherwise, returns rdbuf()-&gtpubseekoff(0, std::ios_base::cur, std::ios_base::in).
+<p> 引数なし, 返却成功時はpointerの現在位置, 失敗時はpos_type(-1)
+<p> failure if an error occurred (the error state flag is not goodbit) and exceptions() is set to throw for that state. If an internal operation throws an exception, it is caught and badbit is set. If exceptions() is set for badbit, the exception is rethrown.
+<h3>例</h3>
+<pre>
+<code>
+#include &ltiostream&gt
+#include &ltstring&gt
+#include &ltsstream&gt
+
+int main()
+{
+  std::string str = "Hello, world";
+  std::istringstream in(str);
+  std::string word;
+  in &gt&gt word;
+  std::cout &lt&lt "After reading the word \"" &lt&lt word
+    &lt&lt "\" tellg() returns " &lt&lt in.tellg() &lt&lt '\n';
+</code>
+</pre>
+<p>出力:
+<pre>
+<code>
+After reading the word "Hello," tellg() returns 6
+</code>
+</pre>
+<h2>seekg</h2>
+<p> std::basic_istream::seekg
+<p> (1) basic_istream& seekg(pos_type pos);
+<p> (2) basic_istream& seekg(off_type off, std::ios_base::seekdir dir);
+<p> Sets input position indicator of the current associated streambuf object. In case of failure, calls setstate(std::ios_base::failbit) . Before doing anything els, seekg clears eofbit. (since C++11)
+<p> (1) sets the input position indicator to absolute (relative to the beginnning of the file) value pos. Specifically, executes rdbuf()-&gtpubseekpos(pos, std::ios_base::in) .
+<p> (2) sets the input position indicator to position off, relative to position, defined by dir. Specifically, executes rdbuf()-&gtpubseekoff(off, dir, std::ios_base::in) .
+<h3>Parameters</h3> 
+<p> pos - absolute position to set the input position indicator to. 
+<p> off - relative position to set the input position indicator to. 
+<p> dir - defines base position to apply the relative offset to. It can be one of the following constants: beg : the beginning of a stream. end : the ending of a stream. our : the current position of stream position indicator. 
+<p> Return value is *this
+<p> failure if an error occurred (the error state flag is not goodbit) and exceptions() is set to throw for that state. If an internal operation throws an exception, it is caught and badbit is set. If exceptions() is set for badbit, the exception is rethrown.
+<h3>Example</h3>
+<pre>
+<code>
+#include &ltiostream&gt
+#include &ltstring&gt
+#include &ltsstream&gt
+
+int main() 
+{
+  std::string str = "Hello, world";
+  std::istringstream in(str);
+  std::string word1, word2;
+
+  in &gt&gt word1;
+  in.seekg(0); // rewind
+  in &gt&gt word2;
+
+  std::cout &lt&lt "word1 = " &lt&lt word1 &lt&lt '\n'
+            &lt&lt "word2 = " &lt&lt word2 &lt&lt '\n';
+}
+</code>
+</pre>
+<p>Output:
+<pre>
+<code>
+word1 = Hello,
+word2 = Hello,
+</code>
+</pre>
+<h2>pubseekoff</h2>
+<p> std::streambuf::pubseekoff, public member function
+<p> streampos pubseekoff (streamoff off, ios_base::seekdir way, ios_base::opermode which = ios_base::in | ios_base::out);
+<p> Set internal position pointer to relative position. Call the protected virtual member seekoff with the same arguments off, way and which. Member seek of does nothing in streambuf but derived classes shall override this behavior to after the internal pointers appropriately: both filebuf and stringbuf override this virtual member function to set the internalpointer specified by which to a position offset off relative to the direction specified by way.
+<h3>Parameters</h3>
+<p> off - Offset value, relative to the way parameter. streamoff is an offset type (generally, a signed integral type).
+<p> way - Object of type ios_base::seekdir. It may take any of the following constant values: ios_base::beg : beginning of the stream buffer. ios_base::cur : current position in the stream buffer. ios_base::end end of the stream buffer.
+<p> which - Generally used to determine the position on which of the controlled sequences shall be modified: the input sequence, the outputsequence, or both. It is an object of type ios_base::openmode that, for this function, may take any combination of the following significant constant values: ios_base::in : modify current position in controlled input sequence. ios_base::out : Modify current position in controlled output sequence.
+<h3>Return Value</h3>
+The new position of the modified position pointer. The default definition in streeammbuf always returns -1. streampos is a positioning type that can be converted to/from integral types (an fpos type).
+<h3>Example</h3>
+<pre>
+<code>
+#include &ltiostream&gt
+#include &ltfstream&gt
+int main () {
+  std::fstream filestr ("test.txt");
+  if (filestr) {
+    std::streambuf* pbuf = filestr.rdbuf();
+    long size = pbuf-&gtpubseekoff(0,filestr.end);
+    std::cout &lt&lt "The file size is " &lt&lt size &lt&lt " characters.\n";
+    filestr.close();
+  }
+  return 0;
+}
+</code>
+</pre>
+
+<h2>pubseekpos</h2>
+<p> std::streambuf::pubseekpos, public member function
+<p> streampos pobseekpos(streampos pos, ios_base::openmode which = ios_base::in | ios_base::out);
+<p> Set internal position pointer to absolute position. Calls the protected virtual member seekpos with the same arguments pos and which. Member seekpos does nothing in streambuf, but derived classes shall override this behavior to alter the internal pointers appropriately: both filebuf and stringbuf override this virtual member function to set the internal pointer specified by which to the absolute position pos.
+<h3>Parameters</h3>
+<p> pos - Same as pubseekoff
+<p> which - Same as pubseekoff
+<h3>Return Value</h3>
+<p> Same as pubseekoff
+<h3>Exmaple</h3>
+<p> Following example reads and prints 10 characters of a file starting at position 10 (character 11th to 20th). 
+<pre>
+<code>
+// change position with pubseekpos
+#include &ltiostream&gt // std::cout, std::streambuf
+#include &ltfstream&gt // std::fstream
+
+int main() {
+  std::fstream filestr("test.txt");
+  if (filestr) {
+    std::streambuf* pbuf = filestr.rdbuf();
+    long size = pbuf-&gtpubseekoff(0,filestr.end);  // get size
+    if (size&gt20) {
+      char buffer[11];
+      // change position to 10
+      pbuf-&gtpubseekpos(10);
+      // read 10 characters
+      pbuf-&gtsgetn (buffer,10);
+      // append null character to string
+      buffer[10]=0;
+      std::cout &lt&lt buffer &lt&lt '\n';
+    }
+    filestr.close();
+  }
+  return 0;
+}
+</code>
+</pre>
+<p> test.txt:
+<pre>
+<code>
+abcdefghijklmnopqrstuvwxyz
+</code>
+</pre>
+<p>Output:
+<pre>
+<code>
+klmnopqrst
+</code>
+</pre>
+
+<h2>sgetn</h2>
+<p> std::streambuf::sgetn, public member function
+<p> streamsize sgetn (char* s, streamsize n);
+Get sequence of characters
+Calls the protected virtual member xgetn with the same arguments s and n. The default definition of xgetn in streambuf retrieves characters from the controlled input sequence and stores them in the array pointed by s, until either n characters have been extracted or the end of the sequence is reached.
+<h3>Parameters</h3>
+<p> s - Pointer to an array where the character sequence is copied.
+<p> n - Maximum number of characters to be retrieved. This shall be a non-negative value. streamsize is a signed integral type.
+<h3>Return Value</h3>
+<p> The number of characters copied. streamsize is a signed integral type.
+<h3>Example</h3>
+<p> Following example reads an entire file into a buffer using its stream buffer, and is then written to the standard output.
+<pre>
+<code>
+// read a file into buffer - sgetn() example
+#include &ltiostream&gt  // std::cout, std::streambuf, std::streamsize
+#include &ltfstream&gt  // std::ifstream
+
+int main() {
+  char* contents;
+  std::ifstream istr ("test.txt");
+  if (istr) {
+    std::streambuf* pbuf = istr.rdbuf();
+    std::streamsize size = pbuf-&gtpubseekoff(0,istr.end);
+    pbuf-&gtpubseekoff(0,istr.beg);  // rewind
+    contents  = new char [size];
+    pbuf-&gtsgetn (contents, size);
+    istr.close();
+    std::cout.write(contents,size);
+    return 0;
+  }
+}
+</code>
+</pre>
+<p> test.txt:
+<pre>
+<code>
+TextMate may be the latest craze for developing Ruby on Rails applications,
+but Vim is forever.
+</code>
+</pre>
+<p> Output:
+<pre>
+<code>
+TextMate may be the latest craze for developing Ruby on Rails applications,
+but Vim is forever.
+</code>
+</pre>
+
+<h3>rdbuf</h3>
+<p> std::ios::rdbuf, public member function
+<p> get (1) streambuf* rdbuf() const;
+<p> set (2) streambuf* rdbuf(streambuf* sb);
+<p> Get/set stream buffer. The first form (1) returns a pointer to the stream buffer object currently associated with the stream. The second form (2) also sets the object pointed by sb as the stream buffer associated with the streeam and clears the error state flags. If sb is a null pointer, the function automatically sets the badbit error state flags (which may throw an exception if member exceptions has been passed badbit). Some derived stream classes (such as stringstram and fstream) maintain their own internal stream buffer, to which they are associated on construction. Calling this functino to change the associated stream buffer shall have no effect on that internal stream buffer: the stream will have an associated stream buffer which is different from its internal stream buffer (although input/output operations on streams always use the associated stream buffer, as returned by this member function).
+<h3>Parameters</h3>
+<p> sb - Pointer to a streambuf object.
+<h3>Return Value</h3>
+<p> A pointer to the stream buffer object associated with the stream before the call.
+<h3>Example</h3>
+<p> Following example uses both function forms: first to get a pointer to a file's streambuf object and then to assign it to cout.
+<pre>
+<code>
+// redirecting cout's output thrrough its stream buffer
+#include &ltiostream&gt     // std::streambuf, std::cout
+#include &ltfstream&gt      // std::ofstream
+
+int main () {
+  std::streambuf *psbuf, *backup;
+  std::ofstream filestr;
+  filestr.open ("test.txt");
+
+  backup = std::cout.rdbuf();     // back up cout's streambuf
+
+  psbuf = filestr.rdbuf();        // get file's streambuf
+  std::cout.rdbuf(psbuf);         // assign streambuf to cout
+
+  std::cout &lt&lt "This is written to the file";
+
+  std::cout.rdbuf(backup);        // restore cout's original streambuf
+
+  filestr.close();
+
+  return 0;
+}
+</code>
+</pre>
+</body>
+</html>

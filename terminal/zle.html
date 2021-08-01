@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>ZLE解説</title>
+<meta http-equive="content-type" charset="utf-8">
+<link rel="icon" href="/img/favicon.ico">
+<link rel="stylesheet" href="/css/simple.css">
+</head>
+<body>
+<p><a href="./">戻る</a>
+<h1>ZLE解説</h1>
+<p> July 17, 2020
+<p> <a href="https://dev.classmethod.jp/articles/zsh-zle-introduction/">Macがzshになるなら、ZLEを習得するっきゃない！</a> を参考というか丸写しになってしまったがZLEというzshの機能について解説する.
+<p> ZLEとはZsh Line Editorの略語で補完機能を自分でカスタマイズできる. 次のコードを.zshrcに記述してみる.
+<pre>
+<code>
+function my_edit_func() {
+    BUFFER="${BUFFER}xyz"
+    CURSOR+=1
+    zle redisplay
+}
+zle -N my_edit_func
+bindkey "^j" my_edit_func
+</code>
+</pre>
+<p> source ~/.zshrc コマンドで.zshrcを再読み込みする. コマンドライン編集部分でCtrl + j を押すとxyzが末尾に追加されるようになる. 
+<pre>
+<code>
+操作前
+$ abc
+  ^   ^はカーソル位置
+操作後
+$ abcxyz
+</code>
+</pre>
+<p> BUFFERはコマンドラインで編集している文字列を格納する変数. BUFFERの値を変えることでコマンドラインの文字列も変わる.
+<p> CURSORはカーソルがある位置が格納される変数.
+<p> zle redisplay 画面のリフレッシュ. 不要な場合も多いがつけると確実
+<p> zle -N myedit_func はmy_edit_funcをZLEウィジェットとして登録
+<p> bindkey "^j" my_edit_func はctrl + j でmy_edit_funcを発動
+
+<p>応用例. シェルコマンドを活用できる.
+<pre>
+<code>
+function my_edit_func() {
+  BUFFER=$(echo ${BUFFER} | sh)
+  CURSOR=${#BUFFER}
+  zle redisplay
+}
+zle -N my_edit_func
+bindkey "^j" my_edit_func
+</code>
+</pre>
+<pre>
+<code>
+操作前
+$ echo $LANG
+     ^
+操作後
+$ ja_JP.UTF-8
+             ^
+</code>
+</pre>
+<p>既存のウィジェットと組み合わせて使うこともできる. zsh自体もタブを押した時にexpand-or-completeによって補完を行っている. 単語途中でタブが押されてもスペースを挿入して無理やりその位置で補完を実行する.
+<pre>
+<code>
+function my_edit_func() {
+    if [[ "${RBUFFER:0:1}" != " " ]]; then
+        BUFFER="${LBUFFER} ${RBUFFER}"
+    fi
+    zle expand-or-complete
+    zle redisplay
+}
+zle -N my_edit_func
+bindkey "^j" my_edit_func
+</code>
+</pre>
+
+<pre>
+<code>
+操作前
+$ ls /Apple
+         ^
+操作後
+$ ls /Applications/ le
+                   ^
+</code>
+</pre>
+
+<p>Undoはctrl + xで. カーソル位置は元に戻らないので注意.
+
+<h2>Ctrl + zをfgの代わりにする</h2>
+<p> vimなどをCtrl + zで一時的に退避させてfgで元に戻ることができるが, fgではなくctrl + zで戻れるとtoggleしている感覚がいい. 
+<pre>
+<code>
+function fancy-ctrl-z () {
+  if [[ $#BUFFER -eq 0 ]]; then
+    BUFFER="fg"
+    zle accept-line
+  else
+    zle push-input
+    zle clear-screen
+  fi
+}
+zle -N fancy-ctrl-z
+bindkey '^Z' fancy-ctrl-z
+</code>
+</pre>
+</body>
+</html>

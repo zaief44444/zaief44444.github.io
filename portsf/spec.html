@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>portsfの仕様と導入</title>
+<meta http-equive="content-type" charset="utf-8">
+<link rel="stylesheet" href="/css/hljs.css">
+<link rel="icon" href="/img/favicon.ico">
+</head>
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/tomorrow-night-blue.min.css">
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/highlight.min.js"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+<body>
+<h1>portsfの仕様と導入</h1>
+<p>May 22, 2020
+<p> ライブラリの導入方法と仕様について説明する. ライブラリはソースのみなので自分でコンパイルする必要がある.
+<p> ライブラリは4つのソースコードを持つ.
+<ul>
+  <li>ieee80.c</li>
+  <li>ieee80.h</li>
+  <li>portsf.c</li>
+  <li>portsf.h</li>
+</ul>
+
+<h2>ライブラリの導入</h2>
+<p> ソースファイルに直接インクルードしてしまうのが手っ取り早いが, 小さなプログラムをたくさん作る場合実行ファイルが無駄に嵩んでしまう. よって動的リンクをしたい.
+<p> ライブラリのビルド, インクルード, リンクパスなどは手動で行う必要がある. その前提知識などは<a href="https://zaief.jp/cpp/library2">https:/zaief.jp/cpp/library2</a> に説明している. 今回Mac向けに説明する. Linuxの場合はMakefileが付属しているのでそれをそのまま使える. 
+<pre>
+<code>
+export CPATH=$CPATH:$HOME/include
+export LIBRARY_PATH=$LIBRARY_PATH:$HOME/lib
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HOME/lib
+cd ~
+git clone https://github.com/bzgeb/portsf.git
+cd portsf
+ln -sf $HOME/portsf/include/portsf.h $HOME/include/
+cd portsf
+gcc -c portsf.c
+gcc -c ieee80.c
+gcc -dynamiclib -o libportsf.dylib portsf.o ieee80.o
+ln -sf $HOME/portsf/portsf/libportsf.dylib $HOME/lib/
+</code>
+</pre>
+<p> インクルードできない場合ターミナルを再読み込みなどして環境パスが反映されるようにする. 
+<h2>psf_channelformat</h2>
+<p> speaker formatに対応する. STDWAVEで大体OK.
+<pre>
+<code>
+typedef enum { STDWAVE, MC_STD, MC_MONO, MC_STEREO, MC_QUAD,
+MC_LCRS, MC_BFMT, MC_DOLBY_5_1, MC_WAVE_EX } psf_channelformat;
+</code>
+</pre>
+<p> enum宣言の仕方はCとC++で違いが少しあり, Cではこのようにtypedefを使うことでenum psf_channelformatとせずにpsf_channelformatだけで型として使えた. しかしC++ではこれをせずとも一度enumを宣言してしまえば型として使えるようになる. 上の構文は無名enumをtypedefしている. structも同様なことが言える. 参考: <a href="http://www7b.biglobe.ne.jp/~robe/cpphtml/html01/cpp01076.html">http://www7b.biglobe.ne.jp/~robe/cpphtml/html01/cpp01076.html</a>, <a href="https://minus9d.hatenablog.com/entry/20130504/1367634879">https://minus9d.hatenablog.com/entry/20130504/1367634879</a>
+
+<ul>
+  <li>STDWAVE</li>
+  <li>MC_STD</li>
+  <li>MC_MONO</li>
+  <li>MC_STEREO</li>
+  <li>MC_QUAD</li>
+  <li>MC_LCRS</li>
+  <li>MC_BFMT</li>
+  <li>MC_DOLBY_5_1</li>
+  <li>MC_WAVE_EX</li>
+</ul>
+
+<h2>psf_format</h2>
+<pre>
+<code>
+typedef enum { 
+  PSF_FMT_UNKNOWN = 0
+  PSF_STDWAVE,
+  PSF_WAVE_EX,
+  PSF_AIFF,
+  PSF_AIFC
+} psf_format
+</code>
+</pre>
+
+<h2>psf_stype</h2>
+<pre>
+<code>
+typedef enum {
+  PSF_SAMP_UNKNOWN = 0,
+  PSF_SAMP_8, // NOT YET SUPPORTED!
+  PSF_SAMP_16,
+  PSF_SAMP_24,
+  PSF_SAMP_32,
+  PSF_SAMP_IEEE_FLOAT
+} psf_stype;
+</code>
+</pre>
+
+<h2>psf_props</h2>
+<p> サウンドファイルが読み込まれると, 自動的にPSF_PROPSに値が入力される. srateはサンプルレートのことだが, frameレートという用語もありこれはチャンネル全部のサンプルをまとめて一単位とする数え方である. chformatはPSF_WAVE_EXの場合のみ関係する. 
+<pre>
+<code>
+typedef struct psf_props
+{
+  long srate;
+  long chans;
+  psf_stype samptype;
+  psf_format format;
+  psf_channelformat chformat;
+} PSF_PROPS;
+
+</code>
+</pre>
+
+<h2>初期化</h2>
+<p> portsfの機能を使うにはまずint psf_init(void);を呼び出さなくてはならない. 終了するにはint psf_finish(void);を呼び出さなくてはならない. いずれも0を返せば成功. 
+<h2>読み込み</h2>
+<pre>
+<code>
+int psf_sndOpen(const char *path, PSF_PROPS *props, int rescale);
+</code>
+</pre>
+<p> wavファイルを開く. なければ新しく生成することはない. 読み込んだファイルを直接変更することもない(READ ONLY). rescaleはサンプルがfloatデータのときに, PEAKチャンクが存在するときのみ意味をなし, 0以外の値ならPEAKチャンクで設定したサンプルのラウドネスを元に-1.0から1.0のレンジに変換するという意味. 0ならそのままのサンプルの値を使う. 戻り値はsound file descriptorと呼ばれ, 識別子の役割を果たす. 0以上の値なら正常. zero未満はエラーで様々なエラーコードが設定されている.
+<p>例1
+<pre>
+<code>
+PSF_PROPS props;
+int sf;
+sf = psf_sndOpen("sample.wav", &props,0);
+if(sf &lt 0) {
+  printf("Error: unable to open soundfile\n");
+  retur n1;
+}
+
+printf("Sample rate = %d\n", props.srate);
+printf("number of channels = %d\n", props.chans);
+</code>
+</pre>
+<p>例2
+<pre>
+<code>
+int check_sampletype(psf_stype type)
+{
+  int accept = 1;
+  printf("sampletype: ");
+  switch(type) {
+    case(PSF_SAMP_8):
+      printf("8 bit\n");
+      accept = 0; /* No 8bit files! */
+      break;
+    case (PSF_SAMP_16):
+      printf("16 bit\n");
+      break;
+    case (PSF_SAMP_24):
+      printf("24 bit\n");
+      break;
+    case (PSF_SAMP_32):
+      printf("32bit (integer)\n"):
+      break;
+    case (PSF_SAMP_IEEE_FLOAT):
+      printf("32bit floating point\n")
+      break;
+    default:
+      printf("unknown\n");
+      accept = 0;
+    }
+
+    return accept;
+}
+</code>
+</pre>
+<h2>サウンドファイルの生成</h2>
+<p> 次の関数を使う.
+<pre>
+<code>
+int psf_sndCreate(const char *path, const PSF_PROPS *props,
+                  int clip_floats, int minheader, int mode);
+</code>
+</pre>
+<p> PSF_PROPS *propsはconst入力として使う, つまり今回は事前にpropsの値を定義してから生成する. 
+<p> clip_floatsはWAVファイルのPEAKチャンクに対応し, floatは-1.0から1.0までの値で解釈するためこの範囲外の値をどう処理するかをこの値で決める. 1ならデフォルトでクリップする, 0ならクリップしない, つまりPEAKチャンクを利用する. ただ読み込み時にPEAKチャンクをちゃんと処理しないソフトも当然あるので基本的に1が妥当. 
+<p> minheaderを1にすることでヘッダーを最小限にする.
+<p> modeは次のものがある. しかしながらサポートされているのはPSF_CREATE_RDWRのみ. 
+<pre>
+<code>
+typedef enum {PSF_CREATE_RDWR, PSF_CREATE_TEMPORARY,
+            PSF_CREATE_WRONLY } psf_create_mode;
+</code>
+</pre>
+<p>例
+<pre>
+<code>
+int ofd;
+PSF_PROPS props;
+props.srate = 96000;
+props.chans = 6;
+props.samptype = PSF_SAMP_24;
+props.format = PSF_WAVE_EX;
+props.chformat = MC_DOLBY_5_1;
+ofd = psf_sndCreate("soundtrack.wav",&props,1,0,PSF_CREATE_RDWR);
+if(ofd &lt 0) {
+  printf("Error: unable to create output file\n");
+  return 1;
+}
+
+</code>
+</pre>
+<p> ファイル名からフォーマット取得
+<pre>
+<code>
+psf_format format;
+format = psf_getFormatExt("soundtrack.wav");
+props.format = format
+</code>
+</pre>
+<h2>閉じる</h2> 
+<pre>
+<code>
+int psf_sndClose(int std);
+</code>
+</pre>
+<p> stdはpsf_sndOpen()で取得したdescripterを入れる.
+<h2>PEAKチャンクの設定</h2>
+<p> PEAKチャンクは基本的にない方がいい. ソフトが対応していないから. それでも説明は入れておく.
+<p> psf_chpeakでは, posで指定されたサンプルをピークとして設定する.
+<pre>
+<code>
+typedef struct psf_chpeak {
+  float val;
+  unsgined int pos;
+} PSF_CHPEAK
+
+long psf_sndReadPeaks(int sfd, PSF_CHPEAK peakdata[], long *peaktime);
+</code>
+</pre>
+<p>  peakdata[]では少なくともチャンネル数だけの領域を確保しておく. peaktimeは大体いらないのでNULLとするのが良い.
+<pre>
+<code>
+PSF_CHPEAK* peaks;
+peaks = (PSF_CHPEAK*) malloc(props.chans * sizeof(PSF_CHPEAK));
+long peaks_valid = psf_sndReadPeaks(ofd, peaks, NULL);
+</code>
+</pre>
+<h2>サンプルデータの読み書き</h2>
+<p> ファイルフォーマット自体の操作は色々あったが結局実質的なデータはこのサンプルデータなのだから, ここさえ分かればいい. sfd(sound formata descripter)を取得すればokだということだ.
+<pre>
+<code>
+long psf_sndReadFloatFrames(int sfd, float *buf, DWORD nFrames);
+long psf_sndWriteFloatFrames(int sfd, const float *buf, DWORD nFrames);
+</code>
+</pre>
+<p> 名前からもう直ぐわかる. DWORDはDouble Wordでwindowsが良く使う4bytesの表現, 32bit長. 戻り値は実際に読み書きしたフレーム数だがエラーの場合-1となる.
+<pre>
+<code>
+float* frame = (float*) malloc(props.chans * sizeof(float));
+long framesread = psf_sndReadFloatFrames(ifd,frame,1);
+while (framesread == 1){
+/* フレームデータ生成の処理 */
+  psf_sndWriteFloatFrames(ofd,frame,1);
+  framesread = psf_sndReadFloatFrames(ifd,frame,1);
+}
+</code>
+</pre>
+
+</body>
+</html>

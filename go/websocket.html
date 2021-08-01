@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Go言語websocket解説</title>
+<meta http-equive="content-type" charset="utf-8">
+<link rel="stylesheet" href="/css/hljs.css">
+<link rel="icon" href="/img/favicon.ico">
+</head>
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/tomorrow-night-blue.min.css">
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/highlight.min.js"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+<body>
+<p><a href="./">戻る</a>
+<h1>Go言語websocket解説</h1>
+<p> Nov 1, 2020
+<p> websocketではクライエントとサーバーのリアルタイム通信ができ, 動的なページを作ることができる. 従来では例えば掲示板では更新ボタンを押さないと新たなコメントが見られないが, この方式は処理の流れが単純でクライエントからサーバーへ情報を流せば良いだけで, サーバーからクライエントへは動的に生成したhtmlを返せば良いだけだった. しかし更新のたびにいちいちhtmlを読み込むのは無駄が多く, 高速通信には向かない. websocketによって更新ボタンを押さなくても自動的にページの情報が更新されるようにできたり, 通信対戦のゲームを作ることもできるだろう.
+
+<p> websocketはブラウザ側, サーバー側両方で実装をする必要があり, ブラウザ側はjavascriptのwebsocket apiを使い, サーバー側は今回go言語を使うので, gorilla/websocketを使うこととなる. ゴリラが動物的で気に食わないかもしれないが, goではこいつがwebsocketパッケージで一番使われている.
+
+<p> Connはクライエントとのwebsocketの接続を表し, Upgrader.Upgradeによってconn取得. connを使ってクライエントにメッセージを送受信できる:
+
+<pre>
+<code>
+for {
+  messageType, p, err := conn.ReadMessage()
+  if err != nil {
+    log.Println(err)
+    return
+  }
+  if err := conn.WriteMessage(messageType, p); err != nil {
+    log.Println(err)
+    return
+  }
+}
+</code>
+</pre>
+<p> サーバーの方がクライエントよりも偉いので, Read, Writeはサーバーから見た視点で書いている. ちなみにこのコードはクライエントからメッセージを受け取ったらサーバーが鸚鵡返しをするだけ. pは[]byteで, messageTypeは intでwebsocket.BinaryMessage, websocket.TextMessageのどちらか.
+<p> さて, 方法がもう一つありReadMessage(), WriteMessage()関数を使う代わりにio.WriteCloser, io.Readerを使う. この方法ではWriteMessage()で一気にメッセージを送るのではなく逐次メッセージを処理することができる. ある程度書き込んで満足したら, w.Close()で送信となる. 簡単なやりとり以外はこっちを使う方が良い.
+
+<pre>
+<code>
+for {
+	messageType, r, err := conn.NextReader()
+	if err != nil {
+		return
+	}
+	w, err := conn.NextWriter(messageType)
+	if err != nil {
+		return err
+	}
+	if _, err := io.Copy(w, r); err != nil {
+		return err
+	}
+	if err := w.Close(); err != nil {
+		return err
+	}
+}
+</code>
+</pre>
+<p> websocketでは, 3つのコントールメッセージを持ち, close, ping, pongだ. 先ほど出てきたWriteMessage, NextWriterに加えてWriteControl関数がコントールメッセージを送る. 双方向的だ.
+<p> サーバーがcloseメッセージを受け取ると, SetCloseHandlerで設定したhandlerを呼び出される. NextReader, RadMessageでは*CloseErrorが返る. handlerを何も設定していなければcloseメッセージをクライエントに送る.
+<p> サーバーがpingメッセージを受け取るとSetPingHandlerで設定したhandlerが呼び出される. 何もhandlerを設定していなければpongメッセージをクライエントに送る.
+<p> サーバーがpongメッセージを受け取るとSetPongHandlerで設定したhandlerが呼び出される. 何もhandlerを設定していなければ本当に何もしない.
+<p> コントールメッセージのhandlerはNextReader, ReadMessag, message ReaderのRead関数から呼ばれる. 
+<p> NextWriter, WriteMessageや NextReader, ReadMessageなどメッセージの送受信の処理は複数のgoroutineで処理しないこと.
+<p> UpgraderではCheckOriginで指定した関数でcheck originする. デフォルトでは, Origin requestヘッダーがある場合にOrigin hostがHost request headerと等しくない場合handshakeは失敗する.
+
+<h3>func (c *Connf) Close() error</h3>
+<p> 接続を切る. closeメッセージを送ったりその返答を待ったりしない.
+<h3>func (c *Conn) SetPongHandler(h func(appData string) error)</h3>
+<p> サーバーがpongメッセージを受け取った時に呼び出すhandlerを指定する. デフォルトでは何もしない. pongメッセージを受け取るのはread系の関数を呼び出した時であることに注意する. readしない限りは, どんなメッセージも処理されない
+<h3>func (c *Conn) SetCloseHandler(h func(code int, text string)) error</h3>
+<p> peerからcloseメッセージを受信すると, この関数でセットしたhandlerが呼び出される. デフォルトではpeerにcloseメッセージを送り返すだけ. 
+<h3>func (c *Conn) SetReadDeadline(t time.Time) error</h3>
+<p> サーバー側がreadするタイムアウト. この時刻をすぎるとその後はreadしてもエラーとなる. 0を指定するとタイムアウトなし.
+<h3>func (c *Conn) SetWriteDeadline(t time.Time) error</h3>
+<p> サーバー側がwriteするタイムアウト. この時刻をすぎるとその後はwriteしてもエラーとなる. 0を指定するとタイムアウトなし.
+</body>
+</html>

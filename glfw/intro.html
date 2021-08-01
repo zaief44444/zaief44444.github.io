@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>GLFWの導入</title>
+<meta http-equive="content-type" charset="utf-8">
+<link rel="stylesheet" href="/css/hljs.css">
+<link rel="icon" href="/img/favicon.ico">
+</head>
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/tomorrow-night-blue.min.css">
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/highlight.min.js"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+<body>
+<p><a href="./">戻る</a>
+<h1>GLFWの導入</h1>
+<p> June 24, 2020
+
+<p> GLFWの本家は <a href="https://www.glfw.org/">https://www.glfw.org/</a> まず, Introductionを見てみよう. プログラムの説明が先でその後にビルドの説明があるが, とりあえずビルドできることが確認できないと一生懸命仕様を把握しようとしたのにビルドできないなんて元の木阿弥だと嘆くことになる. Once you have written a program, see Compiling GLFW and Building applications. と説明があるが, Compiling GLFW はGLFWライブラリをCMakeを使ってソースビルドしてインストールしたいマゾがやることなので, brew install glfwで素直にインストールする. <a href="https://www.glfw.org/docs/latest/build_guide.html">Building applications</a> のページを見てみる. 
+
+<h2>Including the GLFW header file</h2>
+<p> #include &ltGLFW/glfw3.h&gt ではwindows.hなどプラットフォーム特有のヘッダーをglfw側がインクルードするので自分でインクルードは禁止. opengl関係も禁止. If you are using an OpenGL extension loading library such as glad, the extension loader header should be included before the GLFW one. とあるが, いきなりgladの名前が出てきてloaderとはという疑問に有無も言わせずただリンクだけを貼って説明した気になっており怠慢だ. 少なくとも私はgladではない. リンク先を見てみると, GL/GLES/EGL/GLX/WGL Loader-Generator based on the official specs. と書いており, loaderとは厳密に違ってloader generatorというさらによくわからない概念を押しつけられる. Use the webservice to generate the files you need! とあるが, いきなりwebserviceのリンクを貼られても困る. まず, gladはあくまでgeneratorでありpythonアプリケーションである. このgeneratorを使うことで, 自分が使うべきopenglやvulkanなどのグラフィックAPIの機能を自分で細かくインクルードすることなくプラットフォームに応じてgenerator側が対応してくれる. webserviceを使うことでインストールしなくても手軽に生成できる. 
+<p> glfwの説明に戻ると, gladはglfwよりも前にインクルードしなくてはならないという. 
+
+<h2>Link with the right libraries</h2>
+<p> macの環境で解説する. windowsなどは特殊過ぎて訳が分からないので. With CMake and GLFW source はGLFWをいちいちソースコンパイルしたいマゾがやることなので飛ばして, 次の項目をみる:
+<p> With Cmake and installed GLFW binaries:Cmakeはありがたみがよく分からない.
+<p> With Xcode on macOS: XCode難しいのでよく分からない.
+<p> With command-line on macOS: とてもわかりやすい. 今までの苦労は何だったのかと思わされる. 長々と説明していないで, コマンド一行で一発のことをわざわざCmake書いて...と面倒なことをして. staticにしたいならば -lglfwでなくて-lglfw3にすればいいと書いているが, macOSはdynamicとstaticの区別がそんなに難しいものだったのかよく分からず. しかも, -lglfw3にするとコンパイルできていない. 
+<pre>
+<code>
+cc -o myprog myprog.c -lglfw -framework Cocoa -framework OpenGL -framework IOKit
+</code>
+</pre>
+
+<p> さて, サンプルプログラムはGetting startedに用意されていたが, gladライブラリの導入が面倒でビルドが難しい. Gettting startedの癖にビルドが難しいプログラムを用意するのはやめて欲しいものだ. ここでは, 出典を忘れたが上のコマンドでコンパイルできるプログラムを用意した. 実行すると何もしないウィンドウが表示されるだけだ. 
+<pre>
+<code>
+#include &ltGLFW/glfw3.h&gt
+
+int main(void)
+{
+    GLFWwindow* window;
+
+    /* Initialize the library */
+    if (!glfwInit())
+        return -1;
+
+    /* Create a windowed mode window and its OpenGL context */
+    window = glfwCreateWindow(640, 480, "Hello World", NULL, NULL);
+    if (!window)
+    {
+        glfwTerminate();
+        return -1;
+    }
+
+    /* Make the window's context current */
+    glfwMakeContextCurrent(window);
+
+    /* Loop until the user closes the window */
+    while (!glfwWindowShouldClose(window))
+    {
+        /* Render here */
+        glClear(GL_COLOR_BUFFER_BIT);
+
+        /* Swap front and back buffers */
+        glfwSwapBuffers(window);
+
+        /* Poll for and process events */
+        glfwPollEvents();
+    }
+
+    glfwTerminate();
+    return 0;
+}
+</code>
+</pre>
+
+</body>
+</html>

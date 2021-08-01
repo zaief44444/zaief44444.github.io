@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>clang-format解説</title>
+<meta http-equive="content-type" charset="utf-8">
+<link rel="icon" href="/img/favicon.ico">
+<link rel="stylesheet" href="/css/simple.css">
+</head>
+<body>
+<p><a href="./">戻る</a><h1>clang-format解説</h1>
+<p>July 17, 2020
+<p> C++のコードの改行ルールやインデント幅, スペースの開け方などを一貫性を持たせたものにすることは機能的には変わらなくても美しさの面では重要だ. このような整形ルールは人や開発チームによって趣向が異なるはずであり, 同じ人でも別の整形ルールのコードをいじらなくてはならないこともある. clang-formatは整形するコマンドだが, 細かく整形ルールを定めることができそれを記述したファイルをプロジェクトに置くことでプロジェクト全体をコマンド一つで整形できる.
+
+<p> 整形は一般にエディタの機能でありIDEなどでは標準的だしvimでも%で整形できるが, このように細かいルールを定めるためにこのようにclang-formatという規格がある. いくつかのエディタではclang-formatで整形する機能があり, vimもclang-formatと連携することができる.
+
+<p> <a href="http://clang.llvm.org/docs/ClangFormat.html">http://clang.llvm.org/docs/ClangFormat.html</a> このサイトが本家でドキュメントも十分にある. インストールはbrewでできる.
+<pre>
+<code>
+brew install clang-format
+</code>
+</pre>
+<p> まず, ルールを定めるファイルを作らなくてはならない. ファイル名は .clang-formatもしくは_clang-formatにすること. 実際のサンプルは実はその場で生成することができる.  
+<pre>
+<code>
+clang-format -style=llvm -dump-config &gt .clang-format
+</code>
+</pre>
+<p> 生成すると次のような内容になった: 
+<pre>
+<code>
+---
+Language:        Cpp
+# BasedOnStyle:  LLVM
+AccessModifierOffset: -2
+AlignAfterOpenBracket: Align
+AlignConsecutiveMacros: false
+AlignConsecutiveAssignments: false
+AlignConsecutiveDeclarations: false
+AlignEscapedNewlines: Right
+AlignOperands:   true
+AlignTrailingComments: true
+AllowAllArgumentsOnNextLine: true
+AllowAllConstructorInitializersOnNextLine: true
+AllowAllParametersOfDeclarationOnNextLine: true
+AllowShortBlocksOnASingleLine: Never
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: All
+AllowShortLambdasOnASingleLine: All
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+AlwaysBreakAfterDefinitionReturnType: None
+AlwaysBreakAfterReturnType: None
+AlwaysBreakBeforeMultilineStrings: false
+AlwaysBreakTemplateDeclarations: MultiLine
+BinPackArguments: true
+BinPackParameters: true
+BraceWrapping:
+  AfterCaseLabel:  false
+  AfterClass:      false
+  AfterControlStatement: false
+  AfterEnum:       false
+  AfterFunction:   false
+  AfterNamespace:  false
+  AfterObjCDeclaration: false
+  AfterStruct:     false
+  AfterUnion:      false
+  AfterExternBlock: false
+  BeforeCatch:     false
+  BeforeElse:      false
+  IndentBraces:    false
+  SplitEmptyFunction: true
+  SplitEmptyRecord: true
+  SplitEmptyNamespace: true
+BreakBeforeBinaryOperators: None
+BreakBeforeBraces: Attach
+BreakBeforeInheritanceComma: false
+BreakInheritanceList: BeforeColon
+BreakBeforeTernaryOperators: true
+BreakConstructorInitializersBeforeComma: false
+BreakConstructorInitializers: BeforeColon
+BreakAfterJavaFieldAnnotations: false
+BreakStringLiterals: true
+ColumnLimit:     80
+CommentPragmas:  '^ IWYU pragma:'
+CompactNamespaces: false
+ConstructorInitializerAllOnOneLineOrOnePerLine: false
+ConstructorInitializerIndentWidth: 4
+ContinuationIndentWidth: 4
+Cpp11BracedListStyle: true
+DeriveLineEnding: true
+DerivePointerAlignment: false
+DisableFormat:   false
+ExperimentalAutoDetectBinPacking: false
+FixNamespaceComments: true
+ForEachMacros:
+  - foreach
+  - Q_FOREACH
+  - BOOST_FOREACH
+IncludeBlocks:   Preserve
+IncludeCategories:
+  - Regex:           '^"(llvm|llvm-c|clang|clang-c)/'
+    Priority:        2
+    SortPriority:    0
+  - Regex:           '^(&lt|"(gtest|gmock|isl|json)/)'
+    Priority:        3
+    SortPriority:    0
+  - Regex:           '.*'
+    Priority:        1
+    SortPriority:    0
+IncludeIsMainRegex: '(Test)?$'
+IncludeIsMainSourceRegex: ''
+IndentCaseLabels: false
+IndentGotoLabels: true
+IndentPPDirectives: None
+IndentWidth:     2
+IndentWrappedFunctionNames: false
+JavaScriptQuotes: Leave
+JavaScriptWrapImports: true
+KeepEmptyLinesAtTheStartOfBlocks: true
+MacroBlockBegin: ''
+MacroBlockEnd:   ''
+MaxEmptyLinesToKeep: 1
+NamespaceIndentation: None
+ObjCBinPackProtocolList: Auto
+ObjCBlockIndentWidth: 2
+ObjCSpaceAfterProperty: false
+ObjCSpaceBeforeProtocolList: true
+PenaltyBreakAssignment: 2
+PenaltyBreakBeforeFirstCallParameter: 19
+PenaltyBreakComment: 300
+PenaltyBreakFirstLessLess: 120
+PenaltyBreakString: 1000
+PenaltyBreakTemplateDeclaration: 10
+PenaltyExcessCharacter: 1000000
+PenaltyReturnTypeOnItsOwnLine: 60
+PointerAlignment: Right
+ReflowComments:  true
+SortIncludes:    true
+SortUsingDeclarations: true
+SpaceAfterCStyleCast: false
+SpaceAfterLogicalNot: false
+SpaceAfterTemplateKeyword: true
+SpaceBeforeAssignmentOperators: true
+SpaceBeforeCpp11BracedList: false
+SpaceBeforeCtorInitializerColon: true
+SpaceBeforeInheritanceColon: true
+SpaceBeforeParens: ControlStatements
+SpaceBeforeRangeBasedForLoopColon: true
+SpaceInEmptyBlock: false
+SpaceInEmptyParentheses: false
+SpacesBeforeTrailingComments: 1
+SpacesInAngles:  false
+SpacesInConditionalStatement: false
+SpacesInContainerLiterals: true
+SpacesInCStyleCastParentheses: false
+SpacesInParentheses: false
+SpacesInSquareBrackets: false
+SpaceBeforeSquareBrackets: false
+Standard:        Latest
+StatementMacros:
+  - Q_UNUSED
+  - QT_REQUIRE_VERSION
+TabWidth:        8
+UseCRLF:         false
+UseTab:          Never
+...
+
+
+</code>
+</pre>
+<p> googleの.clang-formatも同様に生成してdiffコマンドによってformatの違いを比較した. diff -y とすることで二列で表示でき見やすい. 
+<pre>
+<code>
+diff -y .clang-format .clang-format2 | less -R
+</code>
+</pre>
+<p> 見方はだいたいわかると思うが, | の行が違いが現れている部分で, &gt は一方の行にはない部分. 
+<pre>
+<code>
+---                                                         ---
+Language:        Cpp                                        Language:        Cpp
+# BasedOnStyle:  LLVM                                     | # BasedOnStyle:  Google
+AccessModifierOffset: -2                                  | AccessModifierOffset: -1
+AlignAfterOpenBracket: Align                                AlignAfterOpenBracket: Align
+AlignConsecutiveMacros: false                               AlignConsecutiveMacros: false
+AlignConsecutiveAssignments: false                          AlignConsecutiveAssignments: false
+AlignConsecutiveDeclarations: false                         AlignConsecutiveDeclarations: false
+AlignEscapedNewlines: Right                               | AlignEscapedNewlines: Left
+AlignOperands:   true                                       AlignOperands:   true
+AlignTrailingComments: true                                 AlignTrailingComments: true
+AllowAllArgumentsOnNextLine: true                           AllowAllArgumentsOnNextLine: true
+AllowAllConstructorInitializersOnNextLine: true             AllowAllConstructorInitializersOnNextLine: true
+AllowAllParametersOfDeclarationOnNextLine: true             AllowAllParametersOfDeclarationOnNextLine: true
+AllowShortBlocksOnASingleLine: Never                        AllowShortBlocksOnASingleLine: Never
+AllowShortCaseLabelsOnASingleLine: false                    AllowShortCaseLabelsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: All                       AllowShortFunctionsOnASingleLine: All
+AllowShortLambdasOnASingleLine: All                         AllowShortLambdasOnASingleLine: All
+AllowShortIfStatementsOnASingleLine: Never                | AllowShortIfStatementsOnASingleLine: WithoutElse
+AllowShortLoopsOnASingleLine: false                       | AllowShortLoopsOnASingleLine: true
+AlwaysBreakAfterDefinitionReturnType: None                  AlwaysBreakAfterDefinitionReturnType: None
+AlwaysBreakAfterReturnType: None                            AlwaysBreakAfterReturnType: None
+AlwaysBreakBeforeMultilineStrings: false                  | AlwaysBreakBeforeMultilineStrings: true
+AlwaysBreakTemplateDeclarations: MultiLine                | AlwaysBreakTemplateDeclarations: Yes
+BinPackArguments: true                                      BinPackArguments: true
+BinPackParameters: true                                     BinPackParameters: true
+BraceWrapping:                                              BraceWrapping:
+  AfterCaseLabel:  false                                      AfterCaseLabel:  false
+  AfterClass:      false                                      AfterClass:      false
+  AfterControlStatement: false                                AfterControlStatement: false
+  AfterEnum:       false                                      AfterEnum:       false
+  AfterFunction:   false                                      AfterFunction:   false
+  AfterNamespace:  false                                      AfterNamespace:  false
+  AfterObjCDeclaration: false                                 AfterObjCDeclaration: false
+  AfterStruct:     false                                      AfterStruct:     false
+  AfterUnion:      false                                      AfterUnion:      false
+  AfterExternBlock: false                                     AfterExternBlock: false
+  BeforeCatch:     false                                      BeforeCatch:     false
+  BeforeElse:      false                                      BeforeElse:      false
+  IndentBraces:    false                                      IndentBraces:    false
+  SplitEmptyFunction: true                                    SplitEmptyFunction: true
+  SplitEmptyRecord: true                                      SplitEmptyRecord: true
+  SplitEmptyNamespace: true                                   SplitEmptyNamespace: true
+BreakBeforeBinaryOperators: None                            BreakBeforeBinaryOperators: None
+BreakBeforeBraces: Attach                                   BreakBeforeBraces: Attach
+BreakBeforeInheritanceComma: false                          BreakBeforeInheritanceComma: false
+BreakInheritanceList: BeforeColon                           BreakInheritanceList: BeforeColon
+BreakBeforeTernaryOperators: true                           BreakBeforeTernaryOperators: true
+BreakConstructorInitializersBeforeComma: false              BreakConstructorInitializersBeforeComma: false
+BreakConstructorInitializers: BeforeColon                   BreakConstructorInitializers: BeforeColon
+BreakAfterJavaFieldAnnotations: false                       BreakAfterJavaFieldAnnotations: false
+BreakStringLiterals: true                                   BreakStringLiterals: true
+ColumnLimit:     80                                         ColumnLimit:     80
+CommentPragmas:  '^ IWYU pragma:'                           CommentPragmas:  '^ IWYU pragma:'
+CompactNamespaces: false                                    CompactNamespaces: false
+ConstructorInitializerAllOnOneLineOrOnePerLine: false     | ConstructorInitializerAllOnOneLineOrOnePerLine: true
+ConstructorInitializerIndentWidth: 4                        ConstructorInitializerIndentWidth: 4
+ContinuationIndentWidth: 4                                  ContinuationIndentWidth: 4
+Cpp11BracedListStyle: true                                  Cpp11BracedListStyle: true
+DeriveLineEnding: true                                      DeriveLineEnding: true
+DerivePointerAlignment: false                             | DerivePointerAlignment: true
+DisableFormat:   false                                      DisableFormat:   false
+ExperimentalAutoDetectBinPacking: false                     ExperimentalAutoDetectBinPacking: false
+FixNamespaceComments: true                                  FixNamespaceComments: true
+ForEachMacros:                                              ForEachMacros:
+  - foreach                                                   - foreach
+  - Q_FOREACH                                                 - Q_FOREACH
+  - BOOST_FOREACH                                             - BOOST_FOREACH
+IncludeBlocks:   Preserve                                 | IncludeBlocks:   Regroup
+IncludeCategories:                                          IncludeCategories:
+  - Regex:           '^"(llvm|llvm-c|clang|clang-c)/'     |   - Regex:           '^&ltext/.*\.h&gt'
+    Priority:        2                                          Priority:        2
+    SortPriority:    0                                          SortPriority:    0
+  - Regex:           '^(&lt|"(gtest|gmock|isl|json)/)'      |   - Regex:           '^&lt.*\.h&gt'
+    Priority:        3                                    |     Priority:        1
+                                                          &gt     SortPriority:    0
+                                                          &gt   - Regex:           '^&lt.*'
+                                                          &gt     Priority:        2
+    SortPriority:    0                                          SortPriority:    0
+  - Regex:           '.*'                                     - Regex:           '.*'
+    Priority:        1                                    |     Priority:        3
+    SortPriority:    0                                          SortPriority:    0
+IncludeIsMainRegex: '(Test)?$'                            | IncludeIsMainRegex: '([-_](test|unittest))?$'
+IncludeIsMainSourceRegex: ''                                IncludeIsMainSourceRegex: ''
+IndentCaseLabels: false                                   | IndentCaseLabels: true
+IndentGotoLabels: true                                      IndentGotoLabels: true
+IndentPPDirectives: None                                    IndentPPDirectives: None
+IndentWidth:     2                                          IndentWidth:     2
+IndentWrappedFunctionNames: false                           IndentWrappedFunctionNames: false
+JavaScriptQuotes: Leave                                     JavaScriptQuotes: Leave
+JavaScriptWrapImports: true                                 JavaScriptWrapImports: true
+KeepEmptyLinesAtTheStartOfBlocks: true                    | KeepEmptyLinesAtTheStartOfBlocks: false
+MacroBlockBegin: ''                                         MacroBlockBegin: ''
+MacroBlockEnd:   ''                                         MacroBlockEnd:   ''
+MaxEmptyLinesToKeep: 1                                      MaxEmptyLinesToKeep: 1
+NamespaceIndentation: None                                  NamespaceIndentation: None
+ObjCBinPackProtocolList: Auto                             | ObjCBinPackProtocolList: Never
+ObjCBlockIndentWidth: 2                                     ObjCBlockIndentWidth: 2
+ObjCSpaceAfterProperty: false                               ObjCSpaceAfterProperty: false
+ObjCSpaceBeforeProtocolList: true                           ObjCSpaceBeforeProtocolList: true
+PenaltyBreakAssignment: 2                                   PenaltyBreakAssignment: 2
+PenaltyBreakBeforeFirstCallParameter: 19                  | PenaltyBreakBeforeFirstCallParameter: 1
+PenaltyBreakComment: 300                                    PenaltyBreakComment: 300
+PenaltyBreakFirstLessLess: 120                              PenaltyBreakFirstLessLess: 120
+PenaltyBreakString: 1000                                    PenaltyBreakString: 1000
+PenaltyBreakTemplateDeclaration: 10                         PenaltyBreakTemplateDeclaration: 10
+PenaltyExcessCharacter: 1000000                             PenaltyExcessCharacter: 1000000
+PenaltyReturnTypeOnItsOwnLine: 60                         | PenaltyReturnTypeOnItsOwnLine: 200
+PointerAlignment: Right                                   | PointerAlignment: Left
+                                                          &gt RawStringFormats:
+                                                          &gt   - Language:        Cpp
+                                                          &gt     Delimiters:
+                                                          &gt       - cc
+                                                          &gt       - CC
+                                                          &gt       - cpp
+                                                          &gt       - Cpp
+                                                          &gt       - CPP
+                                                          &gt       - 'c++'
+                                                          &gt       - 'C++'
+                                                          &gt     CanonicalDelimiter: ''
+                                                          &gt     BasedOnStyle:    google
+                                                          &gt   - Language:        TextProto
+                                                          &gt     Delimiters:
+                                                          &gt       - pb
+                                                          &gt       - PB
+                                                          &gt       - proto
+                                                          &gt       - PROTO
+                                                          &gt     EnclosingFunctions:
+                                                          &gt       - EqualsProto
+                                                          &gt       - EquivToProto
+                                                          &gt       - PARSE_PARTIAL_TEXT_PROTO
+                                                          &gt       - PARSE_TEST_PROTO
+                                                          &gt       - PARSE_TEXT_PROTO
+                                                          &gt       - ParseTextOrDie
+                                                          &gt       - ParseTextProtoOrDie
+                                                          &gt     CanonicalDelimiter: ''
+                                                          &gt     BasedOnStyle:    google
+ReflowComments:  true                                       ReflowComments:  true
+SortIncludes:    true                                       SortIncludes:    true
+SortUsingDeclarations: true                                 SortUsingDeclarations: true
+SpaceAfterCStyleCast: false                                 SpaceAfterCStyleCast: false
+SpaceAfterLogicalNot: false                                 SpaceAfterLogicalNot: false
+SpaceAfterTemplateKeyword: true                             SpaceAfterTemplateKeyword: true
+SpaceBeforeAssignmentOperators: true                        SpaceBeforeAssignmentOperators: true
+SpaceBeforeCpp11BracedList: false                           SpaceBeforeCpp11BracedList: false
+SpaceBeforeCtorInitializerColon: true                       SpaceBeforeCtorInitializerColon: true
+SpaceBeforeInheritanceColon: true                           SpaceBeforeInheritanceColon: true
+SpaceBeforeParens: ControlStatements                        SpaceBeforeParens: ControlStatements
+SpaceBeforeRangeBasedForLoopColon: true                     SpaceBeforeRangeBasedForLoopColon: true
+SpaceInEmptyBlock: false                                    SpaceInEmptyBlock: false
+SpaceInEmptyParentheses: false                              SpaceInEmptyParentheses: false
+SpacesBeforeTrailingComments: 1                           | SpacesBeforeTrailingComments: 2
+SpacesInAngles:  false                                      SpacesInAngles:  false
+SpacesInConditionalStatement: false                         SpacesInConditionalStatement: false
+SpacesInContainerLiterals: true                             SpacesInContainerLiterals: true
+SpacesInCStyleCastParentheses: false                        SpacesInCStyleCastParentheses: false
+SpacesInParentheses: false                                  SpacesInParentheses: false
+SpacesInSquareBrackets: false                               SpacesInSquareBrackets: false
+SpaceBeforeSquareBrackets: false                            SpaceBeforeSquareBrackets: false
+Standard:        Latest                                   | Standard:        Auto
+StatementMacros:                                            StatementMacros:
+  - Q_UNUSED                                                  - Q_UNUSED
+  - QT_REQUIRE_VERSION                                        - QT_REQUIRE_VERSION
+TabWidth:        8                                          TabWidth:        8
+UseCRLF:         false                                      UseCRLF:         false
+UseTab:          Never                                      UseTab:          Never
+...                                                         ...
+
+</code>
+</pre>
+<p> これらのオプションはclang-formatという規格が厳密に定めている. オプションの意味は <a href="http://algo13.net/clang/clang-format-style-oputions.html#top">http://algo13.net/clang/clang-format-style-oputions.html#top</a> や <a href="http://clang.llvm.org/docs/ClangFormatStyleOptions.html">http://clang.llvm.org/docs/ClangFormatStyleOptions.html</a> を参照すれば良いが, オプションはとても多いのでここでは重要なものを取り上げて解説する. 
+
+<h2>AccessModifierOffset</h2>
+<p>public: privateなどのアクセス修飾子は悩ましい部分も多い. 目立たせなくてはならないので, -1か-2を選ぶべきだが-1は中途半端な感じが好きでないのでGoogleのスタイルがいいと思う.
+<p> llvm: AccessModifierOffset:-1 
+<pre>
+<code>
+class Sample
+{
+ public:
+  Sample();
+  ~Sample();
+};
+</code>
+</pre>
+<p> Google: AccessModifierOffset: -2 
+<pre>
+<code>
+class Sample
+{
+public:
+  Sample();
+  ~Sample();
+};
+
+</code>
+</pre>
+
+<h2>AlignAfterOpenBracket(BracketAlignmentStyle)</h2>
+<p> 
+<p> Alignとすると, (), [], {} で改行した時に関数の引数を整列してくれる. これはllvm googleどちらもAlignとなっている.
+<pre>
+<code>
+someLongFunction(argument1,
+                 argument2);
+</code>
+</pre>
+<p> DontAlignでは次のようになる. 
+<pre>
+<code>
+someLongFunction(argument1,
+    argument2);
+</code>
+</pre>
+<h2>AlignConsecutiveAssignments</h2>
+<p> 変数の代入の式が連続している時に=を揃えるかどうか. llvm googleどちらもfalseとなっている. コード入力時に揃えるのも大変な上そこまで見易いとも思えない. falseの時:
+<pre>
+<code>
+int aaaa = 12;
+int b  = 23;
+int ccc = 23;
+</code>
+</pre>
+<p> trueのとき:
+<pre>
+<code>
+int aaaa = 12;
+int b    = 23;
+int ccc  = 23;
+</code>
+</pre>
+<h2>AlignEscapedNewlines</h2>
+<p> エスケープされた改行文字を左側と右側どちらに表示するか. 
+<p> llvm:Right
+<pre>
+<code>
+#define TEST                           \
+  "long long test"                     \
+  "string"                             \
+  "!!"
+</code>
+</pre>
+<p> google:Left
+<pre>
+<code>
+#define TEST       \
+  "long long test" \
+  "string"         \
+  "!!"
+</code>
+</pre>
+<h2>AllowShortIfStatementsOnASingleLine</h2>
+<p> if (a) { return; } のようにifが短く一行で収まる時に整形時にそのままにしても良いかを決める. 
+<p>llvm:Never
+<p>google:WithoutElse
+
+<h2>AlwaysBreakBeforeMultilineStrings</h2>
+<p> 文字列リテラルが連続している時に改行するか. 次のような文があるとする.
+<pre>
+<code>
+auto a = "aaaaaaaaaaaaaaaaaaaaaaaaaaa" "aaa";
+</code>
+</pre>
+<p>llvm:false
+<pre>
+<code>
+auto a = "aaaaaaaaaaaaaaaaaaaaaaaaaaa"
+         "aaa";
+</code>
+</pre>
+<p>google:true
+<pre>
+<code>
+auto a =
+  "aaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  "aaa";
+</code>
+</pre>
+<h2>AlwaysBreakTemplateDeclarations</h2>
+<p>template宣言の時に改行をどうするか. Noの場合:
+<pre>
+<code>
+template &lttypename T&gt T foo() {
+}
+template &lttypename T&gt T foo(int aaaaaaaaaaaaaaaaaaaaa,
+                            int bbbbbbbbbbbbbbbbbbbbb) {
+}
+</code>
+</pre>
+<p>llvm:MultiLine  複数行にまたがっている場合のみ適用する.
+<pre>
+<code>
+template &lttypename T&gt T foo() {
+}
+template &lttypename T&gt
+T foo(int aaaaaaaaaaaaaaaaaaaaa,
+      int bbbbbbbbbbbbbbbbbbbbb) {
+}
+</code>
+</pre>
+<p>google:Yes 常に適用する.
+<pre>
+<code>
+template &lttypename T&gt
+T foo() {
+}
+template &lttypename T&gt
+T foo(int aaaaaaaaaaaaaaaaaaaaa,
+      int bbbbbbbbbbbbbbbbbbbbb) {
+}
+</code>
+</pre>
+
+<h2>BinPackArguments</h2>
+<p> 関数呼び出しの引数をなるべく詰めるか. llvm, google共にtrue:
+<pre>
+<code>
+auto a = function(aaaaaaaaaaaaaaaaaaaaaaaaa, bbbbbbbbbbbbbbbbbbbbbbbbb, ccccccccccccccccccccccccc,
+                  ddddddddddddddddddddddddd, eeeeeeeeeeeeeeeeeeeeeeeee, ddddddddddddddddddddddddd);
+</code>
+</pre>
+<p> flaseの場合. やりすぎのように思える.
+<pre>
+<code>
+auto a = function(aaaaaaaaaaaaaaaaaaaaaaaaa,
+                  bbbbbbbbbbbbbbbbbbbbbbbbb,
+                  ccccccccccccccccccccccccc,
+                  ddddddddddddddddddddddddd,
+                  eeeeeeeeeeeeeeeeeeeeeeeee,
+                  ddddddddddddddddddddddddd);
+</code>
+</pre>
+<h2>BinPackParameters</h2>
+<p> 関数宣言や定義時にパラメータをなるべく詰めるか. llvm, google共にtrue:
+<pre>
+<code>
+void a(const std::string& bbbbbbbbbbbbbbbbbbbbbbbbb, const std::string& ccccccccccccccccccccccccc,
+       const std::string& ddddddddddddddddddddddddd);
+</code>
+</pre>
+<p> flaseの場合: これもやりすぎ. 
+<pre>
+<code>
+void a(const std::string& bbbbbbbbbbbbbbbbbbbbbbbbb,
+       const std::string& ccccccccccccccccccccccccc,
+       const std::string& ddddddddddddddddddddddddd);
+</code>
+</pre>
+
+<h2>ConstructorInitializerAllOnOneLineOrOnePerLine</h2>
+<p> コンストラクタ初期化子部分が行に収まらない場合, 1行ずつ表示.
+<p>llvm:false
+<pre>
+<code>
+A::A()
+  : some_variable{}, some_variable2{}, some_variable3{}, some_variable4{},
+    some_variable5{}
+{
+}
+</code>
+</pre>
+<p>google:true
+<pre>
+<code>
+A::A()
+  : some_variable{},
+    some_variable2{},
+    some_variable3{},
+    some_variable4{},
+    some_variable5{}
+{
+}
+</code>
+</pre>
+<h2>DerivePointerAlignment</h2>
+<p> trueとすると&と*の整形の好みを読み取り, それを元にフォーマットする. フォールバックとしてのみ利用.
+<p>llvm:false 
+<p>google:true
+<h2>IncludeBlocks</h2>
+<p>#include のソートの仕方.
+<p>llvm:Preserve ブロックごとにそれぞれソートする.
+<pre>
+<code>
+#include "b.h"               into      #include "b.h"
+
+#include &ltlib/main.h&gt                  #include "a.h"
+#include "a.h"                         #include &ltlib/main.h&gt
+</code>
+</pre>
+<p>google:Regroup ブロック関係なくソートした後, カテゴリごとにブロックで分けられる.
+<pre>
+<code>
+#include "b.h"               into      #include "a.h"
+                                       #include "b.h"
+#include &ltlib/main.h&gt
+#include "a.h"                         #include &ltlib/main.h&gt
+</code>
+</pre>
+<h2>IndentCaseLabels</h2>
+<p>case:のときのインデントの仕方.
+<p>llvm:false 
+<pre>
+<code>
+switch (x)
+{
+case A: break;
+case B: break;
+}
+</code>
+</pre>
+<p>google:true こっちの方が綺麗に見えるが, インデントが深くなりがち.
+<pre>
+<code>
+switch (x)
+{
+  case A: break;
+  case B: break;
+}
+</code>
+</pre>
+<h2>IndentWidth</h2>
+<p> インデント幅. llvm, google共に2. 4の人も多いのかもしれないが, 4はインデントが深くなると見辛くなる.
+
+<h2>KeepEmptyLinesAtTheStartOfBlocks</h2>
+<p>ブロック内の改行の仕方は一般的に不規則ではあるが, 先頭行を開けるかどうかに関しては空けたままか空けないかのどちらかとなる. 
+<p>llvm:true 
+<pre>
+<code>
+true:                                  
+if (foo) {
+                                       
+  bar();
+}
+</code>
+</pre>
+<p>google:false 先頭の空行は蛇足なのでこっちがいいだろう.
+<pre>
+<code>
+false:
+if (foo) { 
+  bar();
+}
+</code>
+</pre>
+<h2>ObjCBinPackProtocolList</h2>
+<p> Objective-Cなので関係ない.
+<p>llvm:Auto 
+<p>google:Never
+<h2>PenaltyBreakBeforeFirstCallParameter</h2>
+<p>The penalty for breaking a function call after call(. これはよくあることだと思うのでgoogleはペナルティが最小限となっている.
+<p>llvm:19 
+<p>google:1
+<h2>PenaltyReturnTypeOnItsOwnLine</h2>
+<p>Penalty for putting the return type of a function onto its own line. つまりreturn型のみだけで一行を占有すること.
+<p>llvm:60 
+<p>google:200
+
+<h2>PointerAlignment</h2>
+<p>llvm:Right 
+<pre>
+<code>
+int* a;
+</code>
+</pre>
+<p>google:Left
+<pre>
+<code>
+int *a;
+</code>
+</pre>
+<h2>SpacesBeforeTrailingComments</h2>
+<p> //コメントの前のスペースの数. 2の方が見やすいと思う.
+<p>llvm:1 
+<p>google:2
+
+<h2>Standard</h2>
+<p>llvm:Latest 最新のc++の規格に沿って整形.
+<p>google:Auto コードから最も傾向が近いものを推測して整形. なるべく最新でいいと思うが, 最新の構文は古いコンパイラではエラーになったりするのでその時は古いものにする必要がある. 
+<pre>
+<code>
+c++03:                                 
+vector&ltset&ltint&gt &gt x;
+</code>
+</pre>
+<pre>
+<code>
+latest:
+vector&ltset&ltint&gt&gt x;
+</code>
+</pre>
+
+<h2>UseTab</h2>
+<p> Neverが妥当. Alwaysで通常通り, ForIndentationでインデント用のみ. タブはスペースと違い幅が4だったり2だったりのばらつきが酷いので使わないのが妥当.
+
+<h1>clang-formatコマンドの使い方</h1>
+<p> llvmやgoogleが定めるclang-formatにしたがって整形する. 整形が標準出力されるのでリダイレクトで書き込める.
+<pre>
+<code>
+clang-format --style=google main.cpp > main_google.cpp
+</code>
+</pre>
+<p> -iオプションをつけることで標準出力ではなくファイルをその場で変更する. 
+<pre>
+<code>
+clang-format -i --style=google main.cpp
+</code>
+</pre>
+<p> .clang-formatファイルで定めたスタイルで整形する. fileはファイル名ではなく本当にfileと入力する. .clang-formatがファイルと同じディレクトリになければ親ディレクトリの.clangformatを再帰的に探していく.
+<pre>
+<code>
+clang-format -i --style=file main.cpp
+</code>
+</pre>
+
+<h1>clang-formatをエディタと統合する</h1>
+<p> <a href="http://clang.llvm.org/docs/ClangFormat.html">http://clang.llvm.org/docs/ClangFormat.html</a> で様々なエディタとclang-formatの対応状況がわかるが, 今回はvim向けにvim-clang-formatというプラグインを使って整形を自動的に行う方法を調べていく. これによってインデントの仕方もこの設定通りになる. 似たものにclang-format.pyがあるが別物なので注意. vim-clang-formatはpythonが必要なかったり柔軟性がより高い.
+
+<p>  dein_lazy.tomlに次のように追加した. vim-operator-userプラグインを使うことで選択した範囲だけを整形することができる. googleは元からスタイルが素晴らしいので特に何もオプションを付けなかった.
+<pre>
+<code>
+[[plugins]]
+repo = 'rhysd/vim-clang-format'
+on_ft = ['c', 'cpp']
+hook_add = '''
+    let g:clang_format#style_options = {
+        \ "BasedOnStyle" : "Google"}
+    let g:clang_format#auto_format = 1
+    autocmd FileType c,cpp,objc map &ltbuffer&gt&ltLeader&gtf &ltPlug&gt(operator-clang-format)'''
+
+[[plugins]]
+repo = 'kana/vim-operator-user'
+on_ft = ['c', 'cpp']
+</code>
+</pre>
+</body>
+</html>

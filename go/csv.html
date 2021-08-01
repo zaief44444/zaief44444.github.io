@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Go言語csvファイル操作</title>
+<meta http-equive="content-type" charset="utf-8">
+<link rel="stylesheet" href="/css/hljs.css">
+<link rel="icon" href="/img/favicon.ico">
+</head>
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/tomorrow-night-blue.min.css">
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/highlight.min.js"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+<body>
+<p><a href="./">戻る</a>
+<h1>Go言語csv解説</h1>
+<p> Oct 31, 2020
+<p> データの処理はアプリケーションにおいて重要だが, データ形式としてcsvが一番簡単だ. 大は小を兼ねる理論でjsonやyaml, tomlを使ってもなんとかなりそうだが, 注意深くデータ形式を設定しないとすぐに煩雑となる. また, csvで慣れれば他のデータ形式の処理もすぐにわかるだろう.
+<p> <a href="https://golang.hateblo.jp/entry/golang-encoding-csv">https://golang.hateblo.jp/entry/golang-encoding-csv</a> を参考にしている
+<p> <a href="https://qiita.com/tez/items/1fdcbd9e2b6b575b6725">Go/golangでの日付処理まとめ(チートシート)</a>
+
+
+<p> csv作成
+<pre>
+<code>
+package main
+
+import (
+	"encoding/csv"
+	"log"
+	"os"
+)
+
+func main() {
+	records := [][]string{
+		[]string{"名前", "年齢", "身長", "体重"},
+		[]string{"Tanaka", "31", "190cm", "97kg"},
+		[]string{"Suzuki", "46", "180cm", "79kg"},
+		[]string{"Matsui", "45", "188cm", "95kg"},
+	}
+	
+	f, err := os.Create("file.csv")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer f.Close()
+
+	w := csv.NewWriter(f)
+	for _, record := range records {
+		if err := w.Write(record); err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	w.Flush()
+
+	if err := w.Error(); err != nil {
+		log.Fatal(err)
+	}
+}
+</code>
+</pre>
+</body>
+</html>

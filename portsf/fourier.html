@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>基本波形のフーリエ展開</title>
+<meta http-equive="content-type" charset="utf-8">
+<link rel="stylesheet" href="/css/hljs.css">
+<link rel="icon" href="/img/favicon.ico">
+</head>
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/tomorrow-night-blue.min.css">
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/highlight.min.js"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+<script>
+MathJax = {
+  tex: {
+    inlineMath: [['$', '$'], ['\\(', '\\)']]
+  },
+  svg: {
+    fontCache: 'global'
+  }
+};
+</script>
+<script type="text/javascript" id="MathJax-script" async
+  src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js">
+</script>
+<body>
+  <p><a href="./">戻る</a>
+<h1>基本波形のフーリエ展開</h1>
+<p>June 22, 2020
+<p> コンピューターではサウンドはデジタルデータとして扱うので, 理想的なアナログ波形とは違いミキシング(波の積み重ね)ではそのままサンプルデータを足算しても理想的な音にはならない. サンプルデータはあくまでも波を近似的に表すものでしかないが, フーリエ展開してそのフーリエ級数の項数を十分多く取ることでも近似的な波の表現が得られる. サンプルデータを補完して再現するよりもフーリエ係数から波を再現する方が計算量はずっと多いように思えるが, フーリエ級数の三角関数による波の積み重ねという形は波の扱いがより正確になる. 周波数がサンプルレートに近づくほどサンプルデータの精度はとても荒くなり, sin波が三角波とほとんど同じになったりする. 一方フーリエ係数では周波数によらず精度を維持する. 周波数によってフーリエ級数で使う項をずらせば良い.
+<h2>フーリエ展開の一般論</h2>
+<p> フーリエ展開とは連続的な波をフーリエ係数という離散的なデータで表現できる展開だ. その説明もネット上に腐る程あるが, 周期や積分区間などが皆それぞれ違ったりしている. 式として暗記するのではなく, シュミットの直交化をしているにすぎないと考えればどんな形でも対応できる.
+<p>  区間\(I=[a,b]\)上で定義されたルベーグ可測関数全体の集合Mはベクトル空間だ. このベクトル空間の元\( f,g \) に対し内積を \( \int_{a}^{b} f(x)g(x)dx\) で定義する. 内積の公理を満たしていることはすぐわかる. 内積空間に対しノルムを\( \| f \| = (f,f)^\frac{1}{2} \) で定義する. このままではノルムの分離公理を満たさないので同値関係\( f \sim g \)を \( \mu \) をルベーグ測度として \( \mu( \{x \in M | f(x) \ne g(x) \} )=0 \)で定義する. つまり零集合以外では同じ値を取るものを同値とみなす. これにより分離公理を満たす. それには完全加法性が効いている. 
+<p>上の関数\(f\)が与えられたとして, \(b-a=L\)とおくと直交基底として \(\sin \frac{2 \pi nx}{L},\cos \frac{2\pi nx}{L} (n \geqslant 0) \) が取れる. まずこの基底を正規化しよう. 正規化を計算する事で, いちいち係数を覚える必要がなく頭を一ミリも使わない. 
+<h2>sawtooth(ノコギリ波)</h2>
+<p>sawtoothと言っても上方向と下方向の傾きで二種類あるが, 今回下方向で計算する. 上方向はした方向を反転すればいいだけ. [0,1]で考える.
+<p> \(f(x)=-2x+1\)
+</body>
+</html>

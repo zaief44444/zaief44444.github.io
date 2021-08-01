@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>denite解説</title>
+<meta http-equive="content-type" charset="utf-8">
+<link rel="icon" href="/img/favicon.ico">
+<link rel="stylesheet" href="/css/simple.css">
+</head>
+<body>
+<p><a href="./">戻る</a>
+<h1>denite解説</h1>
+<p>Mar 5, 2020
+<p> deniteはneovim内でファイルを検索をして開いたりなどneovimの移動をwindow内だけでなくファイルの間までも高速に移動できる強力なプラグインである. deniteの解説記事はv3以前のものが多く実はとても不足している. 仕様の変更は割と大きいので自分はdeniteのhelpの例を参照してようやく理解できた. 私は時間をとても消費したので新しいdeniteを導入したい人があまり理解のために苦労しないように解説したい. deniteをdeinでロードする方法を私は取っている. tomlを使ったdeinのプラグイン管理の記事を検索などして参照して欲しい. 簡単に記述したが説明が不足しているので. deniteをプラグインマネージャーなどで導入したら, コマンドラインでDeniteを発動することができる. 
+<p>前提条件としてpynvimというpythonモジュールが必要. pip3 install --user pynvim でインストールする. 
+
+<p> :Denite file/recではfileを新しいバッファに開くことができ, :Denite bufferではすでに開いているバッファを選択でき, Denite lineでは現在のバッファで行番号がついてよりわかりやすい検索ができる. :Denite grepでは後述するように使いたいgrepツールで実行することができる. Deniteにはfilteringという機能があり, 例えば:Denite file/recとすると新たに開きたいファイルにカーソルしてreturnすることで開けるが, ファイル数が多かったりするとj,kで移動して探し続けるのではなくさらにfilteringを発動することで検索して移動ができる. denite v3以降ではデフォルトではfilteringを発動するキーすら存在しないので後述するように自分でキーを割り当てる必要がある. あえてデフォルトをなくすことでより柔軟に設定する余地を与えているという.
+
+<pre>
+<code>
+nmap &ltsilent&gt ,f :&ltC-u&gtDenite file/rec&ltCR&gt
+nmap &ltsilent&gt ,g :&ltC-u&gtDenite grep&ltCR&gt
+nmap &ltsilent&gt ,b :&ltC-u&gtDenite buffer&ltCR&gt
+nmap &ltsilent&gt ,l :&ltC-u&gtDenite line&ltCR&gt
+</code>
+</pre>
+<p> キーマッピングをすることでいちいちコマンドラインで:Denite file/recなどと打たずにすぐ発動できる. 以下はdenite.txtのExampleを参考に作った設定である.
+<pre>
+<code>
+" Define mappings
+autocmd FileType denite call s:denite_my_settings()
+function! s:denite_my_settings() abort
+  nnoremap &ltsilent&gt&ltbuffer&gt&ltexpr&gt &ltCR&gt
+  \ denite#do_map('do_action')
+  nnoremap &ltsilent&gt&ltbuffer&gt&ltexpr&gt d
+  \ denite#do_map('do_action', 'delete')
+  nnoremap &ltsilent&gt&ltbuffer&gt&ltexpr&gt p
+  \ denite#do_map('do_action', 'preview')
+  nnoremap &ltsilent&gt&ltbuffer&gt&ltexpr&gt q
+  \ denite#do_map('quit')
+  nnoremap &ltsilent&gt&ltbuffer&gt&ltexpr&gt i
+  \ denite#do_map('open_filter_buffer')
+  nnoremap &ltsilent&gt&ltbuffer&gt&ltexpr&gt &ltSpace&gt
+  \ denite#do_map('toggle_select').'j'
+endfunction
+</code>
+</pre>
+<p> まずautocmdとはFileTypeがdeniteの時にs:denite_my_settings()を呼び出すということだが, FileTypeとはそもそも何なのかというと, bufferごとにFileTypeが設定されているのだが, vim一つでいくつものbufferが開けるということを知っておこう. 実際にコマンドを打つとわかるが, :Denite file/recなどであるウィンドウのようなものが表示される. このbufferのFileTypeがdeniteということだ. このbufferにフォーカスしている状態なら, 上のキーマップが適用される. s:はsource内の関数という意味で他の.vimなどからは見えない. &ltsilent&gtは実行するコマンドがコマンドラインに表示されない様にする. &ltbuffer&gtはそのbufferのみのマッピングに影響をということなので元の編集ファイルのコマンドに影響を及ぼさない. &ltexpr&gtはマップ先の関数を評価するということだ. 特にiでfilteringを発動できるようになる. 念のためだが, このiというのはもちろんFileTypeがdeniteのbuffer上のキーマップであり, 元のファイルの編集画面上のキーマップではない. 
+
+<pre>
+<code>
+autocmd FileType denite-filter call s:denite_filter_my_settings()
+function! s:denite_filter_my_settings() abort
+  " 一つ上のディレクトリを開き直す
+  inoremap &ltsilent&gt&ltbuffer&gt&ltexpr&gt &ltBS&gt denite#do_map('move_up_path')
+  " imap &ltsilent&gt&ltbuffer&gt &ltC-o&gt &ltPlug&gt(denite_filter_quit)
+  " Deniteを閉じる
+  inoremap &ltsilent&gt&ltbuffer&gt&ltexpr&gt &ltC-c&gt denite#do_map('quit')
+  nnoremap &ltsilent&gt&ltbuffer&gt&ltexpr&gt &ltC-c&gt denite#do_map('quit')
+endfunction
+</code>
+</pre>
+<p> &ltPlug&gtは<a href="https://www.reddit.com/r/vim/comments/78izt4/please_help_understand_how_to_use_plug_mapping/"> https://www.reddit.com/r/vim/comments/78izt4/please_help_understand_how_to_use_plug_mapping/</a> を参考にすれば良い. FileTypeとしてさっきはdeniteだったが今回はdenite-filterである. これは最新であるDenite v3でこのbufferが追加された. 参考: <a href="https://qiita.com/delphinus/items/de15250b39ac08e9c0b9">https://qiita.com/delphinus/items/de15250b39ac08e9c0b9</a> コマンドラインでなくbuffer上でやることでカスタマイズが柔軟になりマッピングができたり補完してくれたりfloating window利用時に視線の移動が楽になっている. floating windowの設定は <a href="https://qiita.com/lighttiger2505/items/d4a3371399cfe6dbdd56">https://qiita.com/lighttiger2505/items/d4a3371399cfe6dbdd56</a> を参考にすれば良い. また自分でヘルプを読むことも必要になる. ヘルプが一番親切だから. ここでヘルプの読み方を確認しよう, まず:h deniteとすればdeniteのヘルプを出すことができる. ヘルプのbufferはデフォルトでは画面の半分の大きさしかでない. ヘルプだけ表示にするにはC-w oとする. 他のバッファは全て自動的にwriteされる. ヘルプから抜けるにはq:とすれば良いがC-w cの方が早い. 
+
+<p> 好きな高速grepツールを使うことができる. ここではripgrepを選んだ. 
+<pre>
+<code>
+" Change file/rec command.
+call denite#custom#var('file/rec', 'command',
+\ ['rg', '--files', '--glob', '!.git'])
+
+" Ripgrep command on grep source
+call denite#custom#var('grep', 'command', ['rg'])
+call denite#custom#var('grep', 'default_opts',
+    \ ['-i', '--vimgrep', '--no-heading'])
+call denite#custom#var('grep', 'recursive_opts', [])
+call denite#custom#var('grep', 'pattern_opt', ['--regexp'])
+call denite#custom#var('grep', 'separator', ['--'])
+call denite#custom#var('grep', 'final_opts', [])
+
+" Specify multiple paths in grep source
+"call denite#start([{'name': 'grep',
+"      \ 'args': [['a.vim', 'b.vim'], '', 'pattern']}])
+</code>
+</pre>
+
+<p> returnキーを押した時の動作でファイルを新しく画面をsplitして開く. 
+<pre>
+<code>
+" Change default action.
+call denite#custom#kind('file', 'default_action', 'split')
+</code>
+</pre>
+
+<p> メニューに関してはあまり使用例を知らない.
+<pre>
+<code>
+" Add custom menus
+let s:menus = {}
+
+let s:menus.zsh = {
+  \ 'description': 'Edit your import zsh configuration'
+  \ }
+let s:menus.zsh.file_candidates = [
+  \ ['zshrc', '~/.config/zsh/.zshrc'],
+  \ ['zshenv', '~/.zshenv'],
+  \ ]
+
+let s:menus.my_commands = {
+  \ 'description': 'Example commands'
+  \ }
+let s:menus.my_commands.command_candidates = [
+  \ ['Split the window', 'vnew'],
+  \ ['Open zsh menu', 'Denite menu:zsh'],
+  \ ['Format code', 'FormatCode', 'go,python'],
+  \ ]
+
+call denite#custom#var('menu', 'menus', s:menus)
+</code>
+</pre>
+
+<p> 説明略, いつか書く.
+<pre>
+<code>
+" Define alias
+call denite#custom#alias('source', 'file/rec/git', 'file/rec')
+call denite#custom#var('file/rec/git', 'command',
+      \ ['git', 'ls-files', '-co', '--exclude-standard'])
+
+call denite#custom#alias('source', 'file/rec/py', 'file/rec')
+call denite#custom#var('file/rec/py', 'command',
+\ ['scantree.py', '--path', ':directory'])
+
+" Change ignore_globs
+call denite#custom#filter('matcher/ignore_globs', 'ignore_globs',
+      \ [ '.git/', '.ropeproject/', '__pycache__/',
+      \   'venv/', 'images/', '*.min.*', 'img/', 'fonts/'])
+
+" Custom action
+" Note: lambda function is not supported in Vim8.
+call denite#custom#action('file', 'test',
+      \ {context -&gt execute('let g:foo = 1')})
+call denite#custom#action('file', 'test2',
+      \ {context -&gt denite#do_action(
+      \  context, 'open', context['targets'])})
+
+</code>
+</pre>
+
+<p> floatingwindowの設定. neovimが新しくないとfloatingwindowが使えないので更新しておくこと. highlight_filter_backgroundやstart_filterはオプション名はもともと-highlight-filter-backgroundや-start-filter出会ったが deniteのヘルプにはNote: The all options are in denite-options. However, "-" is substituted to "_", and "-" prefix is removed. と地味に書いており引っかかる. denite発動時はdeniteのバッファだが-start-filterオプションをtrueにすることで最初からfilteringバッファで開始できる.
+<pre>
+<code>
+" Change default action. use floating
+let s:denite_win_width_percent = 0.85
+let s:denite_win_height_percent = 0.7
+let s:denite_default_options = {
+    \ 'split': 'floating',
+    \ 'winwidth': float2nr(&columns * s:denite_win_width_percent),
+    \ 'wincol': float2nr((&columns - (&columns * s:denite_win_width_percent)) / 2),
+    \ 'winheight': float2nr(&lines * s:denite_win_height_percent),
+    \ 'winrow': float2nr((&lines - (&lines * s:denite_win_height_percent)) / 2),
+    \ 'highlight_filter_background': 'DeniteFilter',
+    \ 'prompt': '$ ',
+    \ 'start_filter': v:true,
+    \ }
+call denite#custom#option('default', s:denite_default_options)
+</code>
+</pre>
+
+<p> 私はdeinを使ってtomlファイルでプラグイン管理をしているので, 最終的な設定としては以下のようにdein.tomlに記述した. tomlでもキーマッピングや関数呼び出しができより役割の区別がしやすくプラグインごとの設定を整理しやすい. '''内がvimscriptであり本質的な設定部分だ. hook_addに記述することでプラグインが認識された時に自動的にスクリプトを実行してくれる. 
+<pre>
+<code>
+[[plugins]]
+repo = 'Shougo/denite.nvim'
+hook_add = '''
+nmap &ltsilent&gt ,f :&ltC-u&gtDenite file/rec&ltCR&gt
+nmap &ltsilent&gt ,g :&ltC-u&gtDenite grep&ltCR&gt
+nmap &ltsilent&gt ,t :&ltC-u&gtDenite file/type&ltCR&gt
+nmap &ltsilent&gt ,b :&ltC-u&gtDenite buffer&ltCR&gt
+nmap &ltsilent&gt ,l :&ltC-u&gtDenite line&ltCR&gt
+" Define mappings
+autocmd FileType denite call s:denite_my_settings()
+function! s:denite_my_settings() abort
+  nnoremap &ltsilent&gt&ltbuffer&gt&ltexpr&gt &ltCR&gt
+        \ denite#do_map('do_action')
+  nnoremap &ltsilent&gt&ltbuffer&gt&ltexpr&gt d
+        \ denite#do_map('do_action', 'delete')
+  nnoremap &ltsilent&gt&ltbuffer&gt&ltexpr&gt p
+        \ denite#do_map('do_action', 'preview')
+  nnoremap &ltsilent&gt&ltbuffer&gt&ltexpr&gt q
+        \ denite#do_map('quit')
+  nnoremap &ltsilent&gt&ltbuffer&gt&ltexpr&gt i
+        \ denite#do_map('open_filter_buffer')
+  nnoremap &ltsilent&gt&ltbuffer&gt&ltexpr&gt &ltSpace&gt
+        \ denite#do_map('toggle_select').'j'
+endfunction
+
+autocmd FileType denite-filter call s:denite_filter_my_settings()
+function! s:denite_filter_my_settings() abort
+  " toggle_select
+  inoremap &ltsilent&gt&ltbuffer&ltexpr&gt &ltC-j&gt denite#do_map('toggle_select')
+  " 一つ上のディレクトリを開き直す
+  inoremap &ltsilent&gt&ltbuffer&gt&ltexpr&gt &ltBS&gt denite#do_map('move_up_path')
+  imap &ltsilent&gt&ltbuffer&gt &ltC-o&gt &ltPlug&gt(denite_filter_quit)
+  " Deniteを閉じる
+  inoremap &ltsilent&gt&ltbuffer&gt&ltexpr&gt &ltC-c&gt denite#do_map('quit')
+  nnoremap &ltsilent&gt&ltbuffer&gt&ltexpr&gt &ltC-c&gt denite#do_map('quit')
+endfunction
+" Change file/rec command.
+call denite#custom#var('file/rec', 'command',
+\ ['rg', '--files', '--glob', '!.git'])
+
+" Ripgrep command on grep source
+call denite#custom#var('grep', 'command', ['rg'])
+call denite#custom#var('grep', 'default_opts',
+    \ ['-i', '--vimgrep', '--no-heading'])
+call denite#custom#var('grep', 'recursive_opts', [])
+call denite#custom#var('grep', 'pattern_opt', ['--regexp'])
+call denite#custom#var('grep', 'separator', ['--'])
+call denite#custom#var('grep', 'final_opts', [])
+
+" Change default action. use floating
+let s:denite_win_width_percent = 0.85
+let s:denite_win_height_percent = 0.7
+let s:denite_default_options = {
+    \ 'split': 'floating',
+    \ 'winwidth': float2nr(&columns * s:denite_win_width_percent),
+    \ 'wincol': float2nr((&columns - (&columns * s:denite_win_width_percent)) / 2),
+    \ 'winheight': float2nr(&lines * s:denite_win_height_percent),
+    \ 'winrow': float2nr((&lines - (&lines * s:denite_win_height_percent)) / 2),
+    \ 'highlight_filter_background': 'DeniteFilter',
+    \ 'prompt': '$ ',
+    \ 'start_filter': v:true,
+    \ }
+call denite#custom#option('default', s:denite_default_options)
+" call denite#custom#kind('file', 'default_action', 'split')
+'''
+</code>
+</pre>
+</body>
+</html>

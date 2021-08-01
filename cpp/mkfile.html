@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Makefile解説</title>
+<meta http-equive="content-type" charset="utf-8">
+<link rel="stylesheet" href="/css/hljs.css">
+<link rel="icon" href="/img/favicon.ico">
+</head>
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/tomorrow-night-blue.min.css">
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/highlight.min.js"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+<body>
+<p><a href="./">戻る</a>
+<h1>Makefile解説</h1>
+<p>Dec 8, 2019
+
+<p> Makefileの解説記事は色々あるが自分なりに書きたかった. いくつか前提知識が必要である.
+<p> .oファイルとはオブジェクトファイルでありコンパイルすると生成される. さらにオブジェクトファイルをリンクすることで実行ファイルができる. 複数のオブジェクトファイルに依存しているときに一つのオブジェクトファイルのみが変更が必要な場合に他のファイルまでコンパイルして生成し直すのは無駄であるから依存関係を明確にすることで再コンパイルの無駄をなくすのが一つの目的である.
+<p> たまに勘違いする人がいるかもしれないが-oはオブジェクトファイルを生成するとかではなく生成ファイル名を指定するという意味である. -cがオブジェクトファイル.oを生成する. -cをつけないならば実行ファイル.outが生成される. また-cとか-oはコマンドのオプションだが, -cは引数なし, -oは引数一つ指定だったりとオプションによって異なる. オプション自体の順番は自由であるがオプション指定が終わった後にコマンドの引数を与えるようにする.
+<h2>例から学ぶ</h2>
+<p> 次の例はipatixのwav2agbのMakefileである. <a href="https://github.com/ipatix/wav2agb/blob/master/Makefile">https://github.com/ipatix/wav2agb/blob/master/Makefile</a> Makefileは実践を通して学んだ方がいい.
+<pre>
+<code>
+CXX = g++
+STRIP = strip
+CXXFLAGS = -Wall -Wextra -Wconversion -std=c++17 -O2 -g
+BINARY = wav2agb
+LIBS =
+
+SRC_FILES = $(wildcard *.cpp)
+OBJ_FILES = $(SRC_FILES:.cpp=.o)
+
+
+all: $(BINARY)
+
+
+.PHONY: clean
+clean:
+	rm -f $(OBJ_FILES)
+
+$(BINARY): $(OBJ_FILES)
+	$(CXX) -o $@ $^ $(LIBS)
+	#$(STRIP) -s $@
+
+%.o: %.cpp
+	$(CXX) -c -o $@ $&lt $(CXXFLAGS)
+</code>
+</pre>
+<p> makeは一番最初の生成ルール(ここではall:)からスタートする. all:はダミーの生成ルールでありここではBINARY = wab2agbのみなのであまり意味ないが複数のものを同時に作りたいときにこのようにダミーの生成ルールを指定する. 多分allじゃなくてもいいが慣習でそうなっている.
+<p> 冒頭のCXX = g++はマクロ定義である. CXXやCXXFLAGSはは定義済みマクロ (参考: <a href= "http://shin.hateblo.jp/entry/2012/05/26/231036">http://shin.hateblo.jp/entry/2012/05/26/231036</a>) でありCXXFLAGSはCXXの引数として使われる. 
+<p>
+<p> $(wildcard *.cpp)はcppファイルの一覧を展開する. こういうのはテキスト変形関数とか単に関数と呼ばれる. <a href="https://www.ecoop.net/coop/translated/GNUMake3.77/make_8.jp.html">https://www.ecoop.net/coop/translated/GNUMake3.77/make_8.jp.html</a>や<a href="https://qiita.com/chibi929/items/b8c5f36434d5d3fbfa4a">https://qiita.com/chibi929/items/b8c5f36434d5d3fbfa4a</a>を参照すれば大体わかる. 覚えるものではない.
+<p> $(SRC_FILES:.cpp=.o)は本数の加工でSRC_FILESの各語の末尾のcppをoに置換. cppに一致しない場合は何もしない.
+<p> %.o: %.cppの部分はサフィックスルールと似ているがよりわかりやすい.
+<p> $@はターゲットファイル名を展開する. %.o: %.cppの次の行にある$@では.oのファイル名を展開する.
+<p> $&ltは最初の依存するファイルの名前を展開する. %.o: %.cppの次の行にある$&ltでは.cppのファイル名を展開する.
+<p> $^は依存ファイル名を全部展開する. この例の場合はOBJ_FILES全てを展開する.
+<p> strip -sはmakefileの関数ではなくシェルのコマンドであることに注意. そもそも#でコメントアウトされているが. 空白を取り除くことでファイルサイズ縮小に役立つとかいう.
+
+
+</body>
+</html>

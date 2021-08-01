@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>ポリシーを基にしたクラス・デザイン</title>
+<meta http-equive="content-type" charset="utf-8">
+<link rel="stylesheet" href="/css/hljs.css">
+<link rel="icon" href="/img/favicon.ico">
+</head>
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/tomorrow-night-blue.min.css">
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/highlight.min.js"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+<link rel="stylesheet" href="/css/hljs.css">
+<body>
+<p><a href="./">戻る</a>
+<h1>ポリシーを基にしたクラス・デザイン</h1>
+<p> July 24, 2020
+<p> テンプレートではより抽象的なポリシーという概念を考える. 型と, ポリシーの2種類を特殊化することで実体を得る. ポリシーは最小限のルールに基づいて実装したものだ. 
+
+<h2>1.9 ポリシークラスの結合</h2>
+<p> 多重継承に対応するように, テンプレートも複数組み合わせることで膨大なパターンが生まれる. しかしながら多重継承では一つ一つ実装しなくてはならないのに対し, テンプレートでは一つだ.
+<p> 
+<pre>
+<code>
+template
+&lt
+  class T,
+  template &ltclass&gt class CheckingPolicy,
+  template &ltclass&gt class ThreadingModel
+&gt
+class SmartPtr
+</code>
+</pre>
+<p> 特殊化.
+<pre>
+<code>
+typedef WidgetPtr&ltWidget, NoCheck, SingleThreaded&gt WdigetPtr;
+</code>
+</pre>
+
+
+<pre>
+<code>
+template &ltclass T&gt struct NoCheck {
+  static void Check(T*) {}
+  }
+}
+template &ltclass T&gt struct EnforceNotNull {
+  class NullPointerException : public std::exception { ... };
+  static void Check(T* ptr) {
+    if (!ptr) throw NullPointerException();
+  }
+}
+</code>
+</pre>
+
+<pre>
+<code>
+template &ltclass T&gt struct EnforceNotNull {
+  class NullPointerException : public std::exception { ... };
+  static void Check(T* ptr) {
+    if (!ptr) ptr = GetDefaultValue();
+  }
+}
+</code>
+</pre>
+
+
+<pre>
+<code>
+&lt
+  class T,
+  template &ltclass&gt class CheckingPolicy,
+  template &ltclass&gt class ThreadingModel
+&gt
+class SmartPtr 
+  : public CheckingPolicy&ltT&gt
+  , public ThreadingModel&ltSmartPtr&gt
+{
+  ...
+  T* opearator-&gt() {
+    typename ThreadingModel&ltSmartPtr&gt::Lock guard(*this);
+    CheckingPolicy&ltT&gt::Check(pointee_);
+    return pointee_;
+  }
+private:
+  T* pointee_;
+}
+</code>
+</pre>
+</body>
+</html>

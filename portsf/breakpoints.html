@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>breakpointsライブラリ</title>
+<meta http-equive="content-type" charset="utf-8">
+<link rel="stylesheet" href="/css/hljs.css">
+<link rel="icon" href="/img/favicon.ico">
+</head>
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/tomorrow-night-blue.min.css">
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/highlight.min.js"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+<body>
+  <p><a href="./">戻る</a>
+<h1>breakpointsライブラリ</h1>
+<p>June 13, 2020
+<p> オーディオプログラミングではサンプルデータの補完という作業が必ず必要になる. 補完の仕方は簡単なものでは線型だが他にもいろいろある. 時間から補完の値を取得したりといった処理はこのようにライブラリとしてまとめてしまうのも良いだろう. このソースはMITライセンスである. 
+<p> このコードで現れるFILE *fp は .brk形式のファイルを扱う. .brkとはbreakpointsのcsv形式であり, 1列目はtime(s), 2列目はpositionで-1(左)から+1(右)までの値をとる. 
+
+<p> portsfライブラリと併用してこのライブラリも使っていく. このサイトのサウンドプログラミングはそれぞれでどのbreakpointsライブラリの機能を利用しているか説明するのでその都度関数を確認すればいい. 
+
+<h2>breakpoints.h</h2>
+<pre>
+<code>
+#ifndef __BREAKPOINTS_H_INCLUDED
+#define __BREAKPOINTS_H_INCLUDED
+
+#include &ltstdio.h&gt
+
+typedef struct breakpoint {
+		double time;
+		double value;
+} BREAKPOINT;
+
+BREAKPOINT	maxpoint(const BREAKPOINT* points,unsigned long npoints);
+BREAKPOINT	minpoint(const BREAKPOINT* points,unsigned long npoints);
+int			inrange(const BREAKPOINT* points,double minval,double maxval,unsigned long npoints);
+double		val_at_brktime(const BREAKPOINT* points, unsigned long npoints, double time);
+BREAKPOINT* get_breakpoints(FILE* fp, unsigned long* psize);
+
+/* breakpoint stream handling */
+
+typedef struct breakpoint_stream {
+	BREAKPOINT*		points;
+	BREAKPOINT		leftpoint,rightpoint;
+	unsigned long	npoints;
+	double			curpos;
+	double			incr;
+	double			width;
+	double			height;
+	unsigned long   ileft,iright;
+	int				more_points;
+} BRKSTREAM;
+
+/* srate cannot be 0; size pointer is optional - can be NULL */
+BRKSTREAM*	bps_newstream(FILE* fp,unsigned long srate,unsigned long* size);
+void		bps_freepoints(BRKSTREAM* stream);
+double		bps_tick(BRKSTREAM* stream);		 /* NB: no error-checking, caller must ensure stream is valid */
+void		bps_rewind(BRKSTREAM* stream); 
+int			bps_inrange(BRKSTREAM* stream,double minval,double maxval);
+int			bps_getminmax(BRKSTREAM* stream,double *outmin,double *outmax);
+
+/* entirely arbitrary...*/
+#define NPOINTS (64)
+#define LINELENGTH (80)
+
+
+#endif
+</code>
+</pre>
+
+<h2>breakpoints.c</h2>
+<pre>
+<code>
+/* basic breakpoint text file support */
+#include &ltbreakpoints.h&gt
+#include &ltstdlib.h&gt
+
+#ifndef MIN
+#define MIN(x,y) ((x) &lt (y) ? (x) : (y))
+#endif
+#ifndef MAX
+#define MAX(x,y) ((x) &gt (y) ? (x) : (y))
+#endif
+BREAKPOINT maxpoint(const BREAKPOINT *points, unsigned long npoints)
+{
+	unsigned long i;
+	BREAKPOINT point;
+
+	point.time  = points[0].time;
+	point.value = points[0].value;
+	if(npoints &gt1) {	
+		for(i=1;i &lt npoints;i++){
+			if(point.value &lt points[i].value){
+				point.time  = points[i].time;
+				point.value = points[i].value;
+				
+			}
+		}
+	}
+	return point;
+}
+
+BREAKPOINT minpoint(const BREAKPOINT* points, unsigned long npoints)
+{
+	unsigned long i;
+	BREAKPOINT point;
+
+	point.time  = points[0].time;
+	point.value = points[0].value;
+	if(npoints &gt1) {	
+		for(i=1;i &lt npoints;i++){
+			if(points[i].value &lt point.value){
+				point.time  = points[i].time;
+				point.value = points[i].value;
+				
+			}
+		}
+	}
+	return point;
+}
+
+int inrange(const BREAKPOINT* points,double minval,double maxval,unsigned long npoints)
+{
+   unsigned long i;
+   int range_OK = 1;
+ 
+   for(i=0; i &lt npoints; i++){
+	   if(points[i].value &lt minval || points[i].value &gt maxval)   {
+			range_OK = 0;		
+			break;
+	   }
+   }
+   return range_OK;
+}
+
+double val_at_brktime(const BREAKPOINT *points, unsigned long npoints, double time)
+{
+	unsigned long i;
+	BREAKPOINT left,right;
+	double frac, val, width;
+
+	/* scan until we find a span containing our time   */
+	for(i=1; i &lt npoints; i++){
+		if(time &lt= points[i].time) 			
+			break;
+	}
+	/* maintain final value if time beyond end of data */
+	if(i == npoints){		
+		return points[i-1].value;
+	}
+	left  = points[i-1];
+	right = points[i];	
+	
+	/* check for instant jump - two points with same time */
+	width = right.time - left.time;
+	if(width==0.0)
+		return right.value;
+	/* get value from this span using linear interpolation */
+	frac = (time - left.time) / width;
+	val  = left.value + (( right.value - left.value)	 * frac);
+
+	return val;
+}
+
+BREAKPOINT* get_breakpoints(FILE *fp, unsigned long *psize)
+{
+	int got;
+	
+	unsigned long npoints = 0, size = NPOINTS;
+	double lasttime    = 0.0;
+	BREAKPOINT *points = NULL;	
+	char line[LINELENGTH];
+
+	if(fp==NULL)
+		return NULL;
+	points = (BREAKPOINT*) malloc(sizeof(BREAKPOINT) * size);
+	if(points==NULL)
+		return NULL;
+
+	while(fgets(line,LINELENGTH,fp)){				
+		if((got = sscanf(line, "%lf%lf", &points[npoints].time,&points[npoints].value) )&lt0)
+			continue;			  /* empty line */
+		if(got==0){
+			printf("Line %lu has non-numeric data\n",npoints+1);
+			break;
+		}
+		if(got==1){
+			printf("Incomplete breakpoint found at point %lu\n",npoints+1);
+			break;
+		}		
+		if(points[npoints].time &lt lasttime){
+			printf("error in breakpoint data at point %lu: time not increasing\n", npoints+1);
+			break;
+		}
+		lasttime = points[npoints].time;
+		if(++npoints == size){
+			BREAKPOINT* tmp;
+			size += NPOINTS;
+			tmp = (BREAKPOINT*) realloc(points, sizeof(BREAKPOINT) * size);
+			if(tmp == NULL)	{	/* too bad! */
+				/* have to release the memory, and return NULL to caller */
+				npoints = 0;
+				free(points);
+				points = NULL;
+				break;		 
+			}
+			points = tmp;
+		}			
+	}
+	if(npoints)							
+		*psize = npoints;	
+	return points;
+}
+
+
+/******** breakpoint stream handling **************/
+
+/* constructor function: return ID of the stream, or -1 for error */
+/*  size can be NULL, if that info is not of interest */
+BRKSTREAM* bps_newstream(FILE *fp,unsigned long srate, unsigned long* size)
+{
+	BRKSTREAM* stream;
+	BREAKPOINT *points;
+	unsigned long npoints;
+
+	if(srate == 0){
+		printf("Error creating stream - srate cannot be zero\n");
+		return NULL;
+	}
+	stream = (BRKSTREAM*) malloc(sizeof(BRKSTREAM));
+	if(stream==NULL)
+		return NULL;
+	/* load breakpoint file and setup stream info  */
+	points = get_breakpoints(fp, &npoints);
+	if(points == NULL){
+		free(stream);
+		return NULL;
+	}
+	if(npoints &lt 2){
+		printf("breakpoint file is too small - at least two points required\n");
+		free(stream);
+		return NULL;
+	}
+	/* init the stream object */
+	stream-&gtnpoints = npoints;
+	stream-&gtpoints  = points;
+	/*  counters */
+	stream-&gtcurpos  = 0.0;
+	stream-&gtileft   = 0;
+	stream-&gtiright  = 1;
+	stream-&gtincr    = 1.0 / srate;
+	/*  first span */
+	stream-&gtleftpoint  = stream-&gtpoints[stream-&gtileft];
+	stream-&gtrightpoint = stream-&gtpoints[stream-&gtiright];
+	stream-&gtwidth	   = stream-&gtrightpoint.time - stream-&gtleftpoint.time; 
+	stream-&gtheight	   = stream-&gtrightpoint.value - stream-&gtleftpoint.value; 	
+	stream-&gtmore_points = 1;
+	if(size)
+		*size = npoints;
+
+	return stream;
+}
+
+/* destructor fucntion for breakpoint streams; need to call this before destroying stream itself */
+void bps_freepoints(BRKSTREAM* stream)
+{
+	if(stream && stream-&gtpoints){
+		free(stream-&gtpoints);	
+		stream-&gtpoints = NULL;
+	}
+}
+
+int bps_getminmax(BRKSTREAM* stream,double *outmin,double *outmax)
+{
+	double val,minval,maxval;
+	unsigned long i;
+	
+	if(stream==NULL || stream-&gtnpoints &lt 2)
+		return -1;
+	
+	minval = maxval = stream-&gtpoints[0].value;
+
+	for(i=1;i &lt stream-&gtnpoints;i++){
+		val = stream-&gtpoints[i].value;
+		minval = MIN(minval,val);
+		maxval = MAX(maxval,val);
+	}
+	*outmin = minval;
+	*outmax = maxval;
+	return 0;
+}
+
+double bps_tick(BRKSTREAM* stream)
+{	
+	double thisval,frac;
+	
+	/* beyond end of brkdata? */
+	if(stream-&gtmore_points == 0)
+		return stream-&gtrightpoint.value;
+	if(stream-&gtwidth == 0.0) 
+		thisval = stream-&gtrightpoint.value;
+	else {
+		/* get value from this span using linear interpolation */
+		frac = (stream-&gtcurpos - stream-&gtleftpoint.time) / stream-&gtwidth;
+		thisval = stream-&gtleftpoint.value + ( stream-&gtheight * frac);
+	}
+	/* move up ready for next sample */
+	stream-&gtcurpos += stream-&gtincr;
+	if(stream-&gtcurpos &gt stream-&gtrightpoint.time){  /* need to go to next span? */
+		stream-&gtileft++; stream-&gtiright++;
+		if(stream-&gtiright &lt stream-&gtnpoints) {
+			stream-&gtleftpoint = stream-&gtpoints[stream-&gtileft];
+			stream-&gtrightpoint = stream-&gtpoints[stream-&gtiright];
+			stream-&gtwidth	= stream-&gtrightpoint.time - stream-&gtleftpoint.time; 
+			stream-&gtheight	= stream-&gtrightpoint.value - stream-&gtleftpoint.value;	
+		}
+		else
+			stream-&gtmore_points = 0;
+	}
+	return thisval;
+}
+
+/* some other utility functions */
+
+/* rewind stream, so we can use data from beginnign again */
+void bps_rewind(BRKSTREAM* stream)
+{
+	if(stream == NULL)
+		return;			  /* a "do-nothing" error! */
+	stream-&gtileft = 0;
+	stream-&gtiright = 1;
+	stream-&gtleftpoint.time	= stream-&gtpoints[stream-&gtileft].time;
+	stream-&gtrightpoint.time	= stream-&gtpoints[stream-&gtiright].time;
+	stream-&gtleftpoint.value	= stream-&gtpoints[stream-&gtileft].value;
+	stream-&gtrightpoint.value	= stream-&gtpoints[stream-&gtiright].value;
+	stream-&gtwidth	= stream-&gtrightpoint.time - stream-&gtleftpoint.time; 
+	stream-&gtheight	= stream-&gtrightpoint.value - stream-&gtleftpoint.value;
+	stream-&gtcurpos	= 0.0;
+	
+}
+
+int bps_inrange(BRKSTREAM* stream,double minval,double maxval)
+{	
+	if(stream == NULL)
+		return -1;
+	return inrange(stream-&gtpoints,minval,maxval,stream-&gtnpoints);
+}
+</code>
+</pre>
+<p> ライブラリの導入の方法はportsfの時と同じようにすれば良い. 
+<h1>仕様</h1>
+<h2>get_breakpoints</h2>
+<p> BREAKPOINT* get_breakpoints(FILE *fp, unsigned long *psize)
+<p> fpはbreakpointファイルのポインターで, breakpointファイル内の全てのbreakpointを読み取り, 読み取ったサイズを*psizeに格納する. 読み取れなかった時はNULLポインターを返すが, 仕様上psizeには0を代入せず何もしない. psizeがNULLならサイズを格納しない. あとNPOINTS=64までしかbreakpointを読み込まないという仕様があることも注意. ポインターなので自分でfreeして処理すること.
+<h2>BRKSTREAM</h2>
+<pre>
+<code>
+typedef struct breakpoint_stream {
+	BREAKPOINT*		points;
+	BREAKPOINT		leftpoint,rightpoint;
+	unsigned long	npoints;
+	double			curpos;
+	double			incr;
+	double			width;
+	double			height;
+	unsigned long   ileft,iright;
+	int				more_points;
+} BRKSTREAM;
+</code>
+</pre>
+<p> ileft, irightはbreakpointの各区間の左端点と右端点のインデックス. 最初はileft=0, iright=1となる. 常にiright-ileft=1となると思うかもしれないが, 右端に到達した時にileft=irightとなる. leftpoint, rightpointも同様. incrは1/サンプルレート, つまり1サンプルあたりかかる時間を表す. curposは現在の時間を表す. more_pointsはcurposより右に点が残っている時1, ないとき0となる.
+<h2>bps_newstream</h2>
+<p> BRKSTREAM* bps_newstream(FILE *fp, unsigned long srate, unsigned long *size)
+<p> 単にBREAKPOINT* ではストリームの位置情報をいちいち自分で管理しなくてはならないが, BRKSTREAM* ではBREAKPOINT*に加えて位置情報や1サンプルあたりの時間経過, 区間幅や区間差分など様々な情報を管理することができる. 獲得に失敗すればNULLとなる. sizeがNULLでないならばsizeにBREAKPOINTの数を返す. NPOINTS=64までの制限があることに注意. <b>メモリ解放はfreeではなく, 次のbps_freepointsを使うこと.</b>
+<h2>bps_freepoints</h2>
+<pre>
+<code>
+void bps_freepoints(BRKSTREAM* stream)
+{
+	if(stream && stream-&gtpoints){
+		free(stream-&gtpoints);	
+		stream-&gtpoints = NULL;
+	}
+}
+</code>
+</pre>
+<p> 構造体が内部にポインターを持つ時にその処理しなくてはならないが, ユーザーに内部的なものまで処理させるのはカプセル化のアンチパターンだ. このようにBRKSTREAM*を処理するにはこの関数を使うことで処理をある程度隠蔽化できる. 余談だがC++のクラスではデストラクターに解放処理を書けば良いと思いきや, クラスをコピーした時に二重開放の危険がある. いずれにせよunique_ptrを使えばこういうことはしなくて済む. 
+<h2>bps_tick</h2>
+<p> double bps_tick(BRKSTREAM* stream)
+<p> breakpointの線型補完値を取得するとともに1サンプル分streamの時間(curpos)を進め, 必要があればwidth, height, ileft, iright, leftpoint, rightpointを更新する. rightpointが右端を超えた時はmore_pointsは0となるが, width=0に更新されない仕様となっていることに注意. 
+<h2>bps_getminmax</h2>
+<p> int bps_getminmax(BRKSTREAM* stream,double *outmin,double *outmax)
+<p> BRKSTREAM* streamの最小値, 最大値をoutmin, outmaxにそれぞれ格納する. outmin, outmaxがNULLであることは想定していないので, nullの場合にも対応させた方が良いかもしれない. それとmaxpoint, minpointと役割が被っているような気がするのでどっちかをなくした方がいいかもしれない.
+</body>
+</html>

@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>fzf解説</title>
+<meta http-equive="content-type" charset="utf-8">
+<link rel="icon" href="/img/favicon.ico">
+<link rel="stylesheet" href="/css/simple.css">
+</head>
+<body>
+<p><a href="./">戻る</a>
+<h1>fzf解説</h1>
+<p> July 17, 2020
+<p> fzfもpecoと同様zshの検索ツールでfzfの方が世界的に有名であるが日本ではpecoも人気で役割的には同じものだが違いを味わっても面白いかも知れない. <a href="https://dev.classmethod.jp/articles/fzf-original-app-for-git-add/">[ターミナル]fzfを使った自作インタラクティブアプリを作ってみよう！〜git addを快適に〜</a> がとてもいい記事でこのおかげで私はfzfの基本が理解できた. fzfは大量の選択肢の中から検索によって一行を選び出す, この説明をちゃんとしている記事は私は今まで見たことがなかった. fzf単体では何もできないが, コマンドをパイプでつなぎ合わせることで強力になるという. 
+<pre> 
+<code>
+brew install fzf
+</code>
+</pre>
+<h2>git addをプレビューでインタラクティブに処理</h2>
+<p> 次のようにすることでgaddと打てばfzfでaddするものを選択することができる. 
+<pre>
+<code>
+alias gadd="git status -s | fzf | awk '{print \$2}' | xargs git add"
+</code>
+</pre>
+
+<p> 参考サイトの次のコマンドでgit addが失敗してしまう. 
+<pre>
+<code>
+function gadd() {
+    local selected
+    selected=$(unbuffer git status -s | fzf -m --ansi --preview="echo {} | awk '{print \$2}' | xargs git diff --color" | awk '{print $2}')
+    if [[ -n "$selected" ]]; then
+        selected=$(tr '\n' ' ' &lt&lt&lt "$selected")
+        git add $selected
+        echo "Completed: git add $selected"
+    fi
+}
+</code>
+</pre>
+<p>macなどBSD系ではselectedの最後の空白を取り除かならないのかわからないが, sedで消してみるとうまくいった. 変数での空白の扱いがより厳密で, デフォルトでシングルクォーテーションで囲ったような展開の仕方なのだろうか. 
+<pre>
+<code>
+function gadd() {
+    local selected
+    selected=$(unbuffer git status -s | fzf -m --ansi --preview="echo {} | awk '{print \$2}' | xargs git diff --color" | awk '{print $2}')
+    if [[ -n "$selected" ]]; then
+        selected=$(tr '\n' ' ' &lt&lt&lt "$selected" | sed -e 's/[[:space:]]*$//') 
+        git add $selected
+        echo "Completed: git add $selected"
+    fi
+}
+
+</code>
+</pre>
+<p><a href="https:/rcmdnk.com/blog/2014/09/21/computer-bash/#bsd-sed-1">sedで改行を出力する</a> macの環境でsedが使いづらすぎる.
+
+<h2>zコマンドとの連携でディレクトリ移動を高速に</h2>
+<p> <a href="https://github.com/rupa/z"></a> zという一文字のコマンドで今までいたディレクトリの場所のリストを表示できる.
+まずbrewでインストールできる.
+<pre>
+<code>
+brew install z
+</code>
+</pre>
+<p> そして, brewの指示に従って~/.zshrcに次の行を追加する. 通常はbrewでインストールすればすぐコマンドが使えるようになるが, シェル関係のプラグインはシェルにいくつか設定を反映させる必要がある.
+<pre>
+<code>
+source /usr/local/etc/profile.d/z.sh
+</code>
+</pre>
+<p> fzfを次のように連携させることで, cddコマンドでディレクトリ移動が高速になる.
+function cdd() {
+  local res=$(z | sort -rn | cut -c 12- | fzf)
+  if [ -n "$res" ]; then
+    cd $res
+  else
+    return 1
+  fi
+}
+
+<h2>参考になる記事</h2>
+<p> <a href="https://qiita.com/b4b4r07/items/9e1bbffb1be70b6ce033">おい、peco もいいけど fzf 使えよ</a>
+<p> <a href="https://qiita.com/reviry/items/e798da034955c2af84c5">gitのdiff, addをfzf でインタラクティブに</a>
+<p> <a href="https://qiita.com/u1and0/items/10af613e36cd385999e4">fuzzy-finderでディレクトリ探しながらcd</a> ディレクトリ移動に関してより柔軟な設定をしている. cddで足りないと思った時に読むといいかもしれない.
+</body>
+</html>

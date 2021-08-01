@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>シェル芸</title>
+<meta http-equive="content-type" charset="utf-8">
+<link rel="icon" href="/img/favicon.ico">
+<link rel="stylesheet" href="/css/simple.css">
+</head>
+<body>
+<p><a href="../">戻る</a>
+<h1>シェル芸</h1>
+<p> Apr 2, 2020
+<p> シェル芸はワンライナーのことを特に指していたりするがこの記事ではもっと一般にシェルスクリプトに関わる記事を載せていく.
+
+<h2>Contents</h2>
+
+<li><a href="sed">sed解説</a></li>
+<!-- <li><a href="script">シェルスクリプトを書いてみる</a></li> -->
+
+<h2>雑記</h2>
+<p> スクリプト実行ファイルのパスを取得する方法. <a href="https://qiita.com/tkygtr6/items/fee79f710c55e3649ec0">https://qiita.com/tkygtr6/items/fee79f710c55e3649ec0</a> を参考にする. 次の方法が良いだろう.
+<pre>
+<code>
+VARIABLE="$(cd "$dirname "$BASH_SOURCE")"; pwd)"
+</code>
+</pre>
+</body>
+</html>

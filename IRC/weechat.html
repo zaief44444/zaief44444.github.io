@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>weechat解説</title>
+<meta http-equive="content-type" charset="utf-8">
+<link rel="icon" href="/img/favicon.ico">
+<link rel="stylesheet" href="/css/simple.css">
+</head>
+<body>
+<p><a href="./">戻る</a>
+<h1>weechat解説</h1>
+<p> Mar 22, 2020
+<p> IRCクライエントとして最も強力なweechatの使い方について解説する. weechatのクイックスタートガイドは言葉足らずで知っている人には読めるが全く最初から読むと意味不明なので. 
+<br><a href="https://weechat.org/files/doc/devel/weechat_quickstart.ja.html">https://weechat.org/files/doc/devel/weechat_quickstart.ja.html</a>
+<br><a href="https://weechat.org/files/doc/devel/weechat_user.ja.html">https://weechat.org/files/doc/devel/weechat_user.ja.html</a>
+<h2>weechatのインストール</h2>
+<p> 私はMacなのでweechatはbrew install weechatで入れている. Linuxもバイナリパッケージが豊富なのでだいたいどのディストリブーションでもすぐにインストールできる. Windowsの人は頑張るしかない. ユーザーガイド通りにすれば良い.
+
+<h2>まず使ってみる</h2>
+<p> weechatコマンドでweechatが起動する. /server add freenode chat.freenode.net とコマンドをうつ. するとchat.freenode.netサーバーがweechatに登録され, weechatはfreenodeという名前からこのサーバーを参照する. このfreenodeという部分は自分で勝手に決めていい. freenodeという名前にしたなら, /connect freenodeとすることでchat.freenode.netサーバーに接続される. []内にはデフォルトのニックネームが使われている. このニックネームを使いたくないならば, 設定をし直してから再接続する必要がある. まず/disconnect freenode で接続を切る. そして /set irc.server_default.nicks = "john" で自分のニックネームはjohnとなる. しかし不親切ガイドには/set irc.server_default.nicks = "john,john2,john3,john4,john5" のように唐突に5つニックネームを並べたコマンドを何の説明もなく紹介している. これは同じサーバー内ではニックネームは早い者勝ちなので既にjohnという人がいた場合に被ってしまった時に予備としてjohn2が使われる. これも被っていたらjohn3が使われる. ニックネームをこのように複数指定した方がいいかもしれない. 仕切り直して/connect freenodeとして再接続する. ニックネームがちゃんと設定したものになっているか確認しよう. いよいよチャンネルに入る. /join #test で#testチャンネルにはいる. 何か適当に打ってみよう. 飽きたらチャンネルから退室するため/part コマンドをうつ. 
+
+<h2>その他の基本的なコマンド</h2>
+<p> サーバーを登録する. ポートがデフォルトの6667の場合は/6667を省いて良い. (上で説明したfreenodeは6667でアクセスできるため省いた)
+<pre>
+<code>
+/server add hoge hogehoge.jp/6664
+</code>
+</pre>
+<p> 登録したserverを削除する
+<pre>
+<code>
+/server del freenode
+</code>
+</pre>
+<p> weechatを終了する
+<pre>
+<code>
+/exit
+</code>
+</pre>
+<p> プラグインをインストールする
+<pre>
+<code>
+/script install grep.py
+/script install go.py
+</code>
+</pre>
+<p> インストールしたプラグイン, 使えるプラグインをリストする
+<pre>
+<code>
+/script
+</code>
+</pre>
+<p> どんなチャンネルがあるかをリストする
+<pre>
+<code>
+/list
+</code>
+</pre>
+<h2>設定</h2>
+<p> 初期設定では~/.weechatディレクトリ内に設定ファイルを置く. これもユーザーガイドが詳しい. アプリケーションの設定ファイルを直接編集して設定を変更する方法の方が直感的でわかりやすいが, このweechatではそれが推奨されないとガイドに書かれている. 起動中にこれらのファイルに書き込まれる可能性があるため, 手動で/reloadしなくてはならない. もしくは/exitしてからファイルを編集するかしないと変更が反映されない. よってweechatでsetコマンドを使って設定するのが推奨されている. 
+<p> そもそも値を設定する前に今の値をどうやって調べるのかが不親切ガイドではすぐわからない. そういう時は次のようにして好きな値を調べられる. このように/helpを使いこなすことが重要. 
+<pre>
+<code>
+/help irc.server_default.nicks
+</code>
+</pre>
+<p> username, realnameは特に空欄で問題ないと思う. 
+<pre>
+<code>
+/set irc.server_default.username = ""
+/set irc.server_default.realname = ""
+</code>
+</pre>
+<p> 文字化けを回避する, エンコード, デコードを調整する. 日本サーバーではIOS-2022-JPを取り扱っているものが多く, このサーバーだけエンコードを変えたいとする. 例えばhogejpというサーバー名なら, 次のようにする.
+<pre>
+<code>
+/set charset.encode.irc.hogejp ISO-2022-JP
+/set charset.decode.irc.hogejp ISO-2022-JP
+</code>
+</pre>
+<p> 文字コードの設定を確認する
+<pre>
+<code>
+/set charset.*
+</code>
+</pre>
+
+<h2>キーバインドの設定</h2>
+<p> alt + gで/goを起動する. itermの場合, <a href="https://blog.jasonmeridth.com/posts/meta-keys-with-iterm-and-weechat/">https://blog.jasonmeridth.com/posts/meta-keys-with-iterm-and-weechat/</a> によるとPreferences-&gtProfiles-&gtKeys-&gtoptionキーの設定で+Escを選択する必要がある. 
+<pre>
+<code>
+/key bind meta-g /go
+</code>
+</pre>
+<p> alt + -, alt + | でwindow分割
+<pre>
+<code>
+/key bind meta-- /window splith
+/key bind meta-| /window splitv
+</code>
+</pre>
+<p>alt + h,j,k,lでwindow移動
+<pre>
+<code>
+/key bind meta-h /window left
+/key bind meta-j /window down
+/key bind meta-k /window up
+/key bind meta-l /window right
+</code>
+</pre>
+
+<p> alt + k はもともとキー入力をコマンドで表示する重要なキーだったが上で使ってしまった. alt + yに割り当てする
+<pre>
+<code>
+/key bind meta-y /input grab_key_command
+</code>
+</pre>
+
+<p>スクロール, j,kの下のキーを使った.
+<pre>
+<code>
+/key bind meta-m /window scroll_down
+/key bind meta-, /window scroll_up
+</code>
+</pre>
+<p>windowを統合
+<pre>
+<code>
+/key bind meta-x /window merge
+</code>
+</pre>
+<p>バッファを閉じる
+<pre>
+<code>
+/key bind meta-c /close
+</code>
+</pre>
+<p>bufferを移動, もともとctrl-Pやctrl-Hでbufferの移動が設定されていたがaltを使う方針に統一.
+<pre>
+<code>
+/key bind meta-n /buffer +1
+/key bind meta-p /buffer -1
+</code>
+</pre>
+
+<p>ctrl-P, ctrl-Nはコマンドラインの履歴を呼び出すのに使いたい.
+<pre>
+<code>
+/key bind ctrl-P /input history_previous
+/key bind ctrl-N /input history_next
+</code>
+</pre>
+
+<p>nicklistのスクロール
+<pre>
+<code>
+/key bind meta-u /bar scroll nicklist * +100%
+/key bind meta-i /bar scroll nicklist * -100%
+</code>
+</pre>
+
+<h1>モジュール</h1>
+<p> モジュール, スクリプト, プラグインなど色々な呼び方があるがここではモジュールと呼ぶことにする. weechatには数多くのモジュールが存在し, 現在も新しいモジュールが作られている. 便利なものをリストしてもいいが, まずは一つ一つのモジュールを使いこなしていくことが大切だ. 多くのモジュールは解説をしなくても大丈夫だが, いくつかのモジュールは設定, 導入や使用方法がわかりにくいので解説する.
+
+<h2>url_hint.py</h2>
+<p> URLが流れて来た時, マウスでコピペするかitermならcmd + クリックでも開けるがいずれにせよ長いurlの時に改行されとても不便が生じる. このモジュールはとても利便性が高く, 流れて来たurlをショートカットキーですぐに開くことができる. <a href="https://github.com/weechat/scripts/blob/master/python/url_hint.py#L35">https://github.com/weechat/scripts/blob/master/python/url_hint.py#L35</a> がソースコード. そこのコメントを見ればわかるが, ここでも説明する. これをインストールするとurlが流れるたびに小さい数字がurlの近くに表示されるようになる. これがurl番号でその番号を開くためにはコマンドの設定をする必要がある. Macでは次のコマンドで設定する. Macではopenコマンドだが他の環境の場合は各自調べその上でopen以下を必要に応じて書き換える. ここではalt + 1でurl1, alt + 2でurl2を開けるようにした. 後も同様に割り当てれば良い. openではデフォルトのブラウザが開かれる.
+<pre>
+<code>
+/alias add open_url /url_hint_replace /exec -bg open {url$1}
+/key bind meta-1 /open_url 1
+/key bind meta-2 /open_url 2
+</code>
+</pre>
+
+
+<h2>その他参考になる記事</h2>
+<a href="https://weechat.org/doc/">https://weechat.org/doc/</a>
+<br><a href="https://qiita.com/taketin/items/dd91ba59dceda96c94aa">https://qiita.com/taketin/items/dd91ba59dceda96c94aa</a> キーバインドの設定など参考にした. リンク先のキーバインドではctrlを使っていたがmacではctrlは統一して使いたくctrl-Hなどはバックスペースの方が馴染み深いため本記事ではaltを使った.
+<br><a href="https://wiki.znc.in/Weechat">https://wiki.znc.in/Weechat</a>
+<br><a href="https://iamkelv.in/blog/2017/08/weechat.html">https://iamkelv.in/blog/2017/08/weechat.html</a> WeechatをIRC bouncerとして使うという記事.
+<br><a href="https://thoughtbot.com/blog/weechat-for-slacks-irc-gateway">https://thoughtbot.com/blog/weechat-for-slacks-irc-gateway</a>
+<br<a href="https://hugo.md/post/the-perfect-weechat-setup-2/">The Perfect Weechat Setup</a> <a href="https://gist.github.com/pascalpoitras/8406501">pascalpoitras/myweechat.md</a> weechatの設定集で有用なもの.
+
+</body>
+</html>

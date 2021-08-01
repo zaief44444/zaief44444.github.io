@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>NTSC</title>
+<meta http-equive="content-type" charset="utf-8">
+<link rel="icon" href="/img/favicon.ico">
+<link rel="stylesheet" href="/css/simple.css">
+</head>
+
+<body>
+<p><a href="./">戻る</a>
+<h1>NTSC</h1>
+<p> Oct 3, 2020
+<p> nesの映像信号がRGBではないので正確な色合いを再現することは難しいが, 再現するためにはNTSCの知識が必要となる.
+<p> <a href="https://ja.wikipedia.org/wiki/NTSC">https://ja.wikipedia.org/wiki/NTSC</a>
+<p> 縦横比は3:4
+<p> 走査線は525本, 525=3*5*5*7 50Hz * 525 = 31500Hzを双安定マルチバイブレーターで1/2分周した相補出力の矩形波を積分器に通して相補出力の鋸歯状波を得て上昇ランプ側の波形だけを選択肢, 放送を受診していない時にも水平偏向系を駆動する. 水平帰線のためにブランキング期間が40本で残りの485本のうちオーバースキャン率90%を考慮しした436本あまりがブラウン管上に表示可能な走査線数となる. さらに, ケル係数を掛け合わせ436 * 0.7 = 約305本程度まで低下. 水平400ラインぺアを要求すると, 垂直解像度が300本以上を満たす数字となる. インターレース方式となっている.
+<p> 基準となるブランキングレベル 0Vを0IRE, 輝度100%時の電位を100IREとした時同期信号のレベルは-40IRE, 同期信号とは水平, 垂直同期信号の総称. 映像信号と同期信号との明確な区別がつくよう映像信号を正電位, 同期信号を負電位としている. V syncとH syncの区別はV sync pulseが 水平走査線周期の3倍の長さを持っていることを利用する. IREとは電位の相対的な単位で0, 100を基準とする. 同期信号の底から最大輝度までの振幅140REを1V p-pとする場合, 同期信号は-286mV, 膵臓信号の最大値は+714mVとなる. NTSCではブラウン管の発光輝度は2.2乗に比例すると想定されているので, あらかじめガンマ補正したもの, つまり電圧を0.45乗(1/2.2)乗したものをあらかじめ放送側がシグナルとして送る. ガンマ補正をする側が放送者側の方が理にかなっている. それは一人が頑張るか, 皆が頑張るかの違いを考えれば一目瞭然だ.
+
+<p> <a href="https://www-ui.is.s.u-tokyo.ac.jp/~o/Computer/Note/010106-ColorRepresentation/">コンピュータでの色表現</a>
+<p> nesはsnesなど通常のコンソールゲームと違いRGBを生成せずにエンコードしてNTSC信号を生成し, TVがデコードする. そのためデコーダー, つまりTVによって色合いが異なるためそれをどう再現するかが問題となる. <a href="https://emulation.gametechwiki.com/index.php/Famicom_Color_Palette">https://emulation.gametechwiki.com/index.php/Famicom_Color_Palette</a> では実際に様々な色合いを確認できる.
+
+<p> NTSC Master clock は21.47727273 MHzで各pixelで4clock, PAL Master clock は26.6017125 MHzで各pixelで5clock.
+<p> 捜査線のタイミング 341 total per scanline
+
+<p> Rendering scanlines (n=240)
+<table border>
+  <tr>
+    <th>名称</th>
+    <th>start</th>
+    <th>duration</th>
+    <th>行</th>
+  </tr>
+  <tr>
+    <td>short sync</td>
+    <td>280</td>
+    <td>25</td>
+    <td>0-239</td>
+  </tr>
+  <tr>
+    <td>black (back porch</td>
+    <td>305</td>
+    <td>4</td>
+    <td>0-239</td>
+  </tr>
+  <tr>
+    <td>colorburst</td>
+    <td>309</td>
+    <td>15</td>
+    <td>0-239</td>
+  </tr>
+  <tr>
+    <td>black (the rest of back porch</td>
+    <td>324</td>
+    <td>5</td>
+    <td>0-239</td>
+  </tr>
+  <tr>
+    <td>pulse (background color in grayscale</td>
+    <td>329</td>
+    <td>1</td>
+    <td>0-239</td>
+  </tr>
+  <tr>
+    <td>left border (background color)</td>
+    <td>330</td>
+    <td>15</td>
+    <td>0-239</td>
+  </tr>
+  <tr>
+    <td>active</td>
+    <td>4</td>
+    <td>256</td>
+    <td>0-239</td>
+  </tr>
+  <tr>
+    <td>right border (background color</td>
+    <td>260</td>
+    <td>11</td>
+    <td>0-239</td>
+  </tr>
+  <tr>
+    <td>black (front porch)</td>
+    <td>271</td>
+    <td>9</td>
+    <td>0-239</td>
+  </tr>
+</table>
+</body>
+</html>

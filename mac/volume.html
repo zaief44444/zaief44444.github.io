@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>パーティションを隠す</title>
+<meta http-equive="content-type" charset="utf-8">
+<link rel="icon" href="/img/favicon.ico">
+<link rel="stylesheet" href="/css/simple.css">
+</head>
+<body>
+<p><a href="../">戻る</a>
+<h1>パーティションを隠す</h1>
+<p> Apr 1, 2020
+<p> Macではapfsボリュームなどは自動的にマウントしてしまう. 今起動しているMacのパーティション以外に別のパーティションのMacが存在するとするとMacが色々混乱してしまう. その例としてcmd + spaceでSpotlightを起動しgoと打ってみると二つのパーティションのgoogle chromeを見つけてしまう. 今起動しているMacのにはないが別のパーティションのアプリケーションが起動できてしまったりと混乱が酷い. 最もひどい例がHomebrewを導入するときに別のパーティションのXcodeを参照してしまうことだ. 
+
+<p> 解決策は <a href="https://hologos.github.io/how-to-prevent-automount-on-macos-catalina/">https://hologos.github.io/how-to-prevent-automount-on-macos-catalina/</a> に書いてあるのでそれに従うだけ. そこの記事にはexfatが書いてあるが必要に応じてapfsなりに置き換えること. 必要な情報はdiskutilコマンドで得て操作を進めること. これを間違えてしまうと何が起きるかわからないので. fstabを直接いじるよりもvifsを使うのが安全だという. fstabはコンピューターを操作する人にとっては常識的な知識なのでこれを機会に身につけてみては.
+
+</body>
+</html>

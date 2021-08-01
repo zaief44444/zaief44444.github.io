@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>dein解説</title>
+<meta http-equive="content-type" charset="utf-8">
+<link rel="icon" href="/img/favicon.ico">
+<link rel="stylesheet" href="/css/simple.css">
+</head>
+<body>
+<p><a href="./">戻る</a>
+<h1>dein解説</h1>
+<p>Mar 19, 2019
+<h2>deinを使ったvimプラグイン管理</h2>
+vimのプラグイン管理ツールとしてdeinが人気である. 他の管理ツールとしてはplugがあるが日本ではdeinが人気であり, Shougo氏という有名な日本の開発者が開発したプラグインである. deinはneovim向けのプラグインなのでneovim以外では他にも設定が必要. 以下はinit.vimに書いている.
+<pre>
+<code>
+"dein Scripts--------------------------------------------------------
+if &compatible
+  set nocompatible
+endif
+
+let g:python3_host_prog = '/usr/bin/python3'
+
+" プラグインが実際にインストールされるディレクトリ
+let s:dein_dir = expand('~/.cache/dein')
+" dein.vim 本体
+let s:dein_repo_dir = s:dein_dir . '/repos/github.com/Shougo/dein.vim'
+
+" dein.vim がなければ github から落としてくる
+if &runtimepath !~# '/dein.vim'
+  if !isdirectory(s:dein_repo_dir)
+    execute '!git clone https://github.com/Shougo/dein.vim' s:dein_repo_dir
+  endif
+  execute 'set runtimepath^=' . fnamemodify(s:dein_repo_dir, ':p')
+endif
+
+" 設定開始
+if dein#load_state(s:dein_dir)
+  call dein#begin(s:dein_dir)
+
+  " プラグインリストを収めた TOML ファイル
+  " 予め TOML ファイル（後述）を用意しておく
+  let g:rc_dir    = expand('~/.config/nvim/')
+  let s:toml      = g:rc_dir . '/dein.toml'
+  let s:lazy_toml = g:rc_dir . '/dein_lazy.toml'
+
+  " TOML を読み込み、キャッシュしておく
+  call dein#load_toml(s:toml,      {'lazy': 0})
+  call dein#load_toml(s:lazy_toml, {'lazy': 1})
+
+  " 設定終了
+  call dein#end()
+  call dein#save_state()
+endif
+
+" もし、未インストールものものがあったらインストール
+if dein#check_install()
+  call dein#install()
+endif
+
+filetype plugin indent on
+syntax enable
+
+"End dein Scripts----------------------------------------------------
+set number
+set autoindent
+set tabstop=2
+set shiftwidth=2
+set expandtab
+set clipboard=unnamed
+set hls
+set smarttab
+set smartindent
+set clipboard+=unnamedplus
+" 置換がインタラクティブになる
+set inccommand=split
+"makefileの時はtabのままにする
+let _curfile = expand("%:t")
+if _curfile =~ "Makefile" || _curfile =~ "makefile" || _curfile =~ ".*\.mk"
+  set noexpandtab
+endif
+imap &ltC-b&gt &ltLeft&gt
+imap &ltC-f&gt &ltRight&gt
+"no highlight esc x 2
+nnoremap &ltsilent&gt&ltESC&gt&ltESC&gt :nohl&ltCR&gt
+"一見意味ないような設定だがcohama/leximal.vimは&ltBS&gtを使って設定されているので
+"&ltC-h&gtもそれと同じように機能させる. inoremapでなくimapでないと機能しない
+imap &ltC-h&gt &ltBS&gt
+"()の対応を表示する機能が見づらすぎるので切る
+if !has('gui_running')
+  let g:loaded_matchparen = 1
+endif
+"マウスのミドルクリックによる貼り付けは大体不意なのでやめる
+map &ltMiddleMouse&gt &ltNop&gt
+map &lt2-MiddleMouse&gt &ltNop&gt
+map &lt3-MiddleMouse&gt &ltNop&gt
+map &lt4-MiddleMouse&gt &ltNop&gt
+imap &ltMiddleMouse&gt &ltNop&gt
+imap &lt2-MiddleMouse&gt &ltNop&gt
+imap &lt3-MiddleMouse&gt &ltNop&gt
+imap &lt4-MiddleMouse&gt &ltNop&gt
+"w!!でsudoで保存
+cabbr w!! w !sudo tee &gt /dev/null %
+" SwapファイルやBackupファイルは前時代的すぎるので無効化する
+set nowritebackup
+set nobackup
+set noswapfile
+" 一文字消すだけで無名レジスタを上書きさせないためにブラックホールレジスタに入れる
+nnoremap x "_x
+nnoremap X "_X
+
+" 表示行単位で移動する
+nnoremap j gj
+nnoremap k gk
+
+augroup MyAutoCmd
+  autocmd!
+  autocmd FileType help setlocal number
+augroup END
+
+augroup BinaryXXD
+  autocmd!
+  autocmd BufReadPre *.bin let &binary =1
+  " -g 1で1byte表示, defaultは2byte
+  autocmd BufReadPost * if &binary | silent %!xxd -g 1
+  autocmd BufReadPost * set ft=xxd | endif
+  autocmd BufWritePre * if &binary | %!xxd -r | endif
+  autocmd BufWritePost * if &binary | silent %!xxd -g 1
+  autocmd BufWritePost * set nomod | endif
+augroup END
+" tagsでなく./tagsと指定するとカレントディレクトリではなく開いているファイルのディレクトリからtagsファイルを探す
+" ;$HOMEとすることでホームディレクトリまで遡ってtagsファイルを探してくれる
+set tags=./tags;$HOME
+nnoremap &ltC-]&gt g&ltC-]&gt
+inoremap &ltC-]&gt g&ltC-]&gt
+</code>
+</pre>
+<p> いきなり見てもわけがわからないと思うが本質的な部分はdein#begin()からdein#endの部分だ. その他は自分の環境に合う様にパスを調整する. init.vim内に直接プラグインを色々ロードする人もいるが私はtomlファイルに色々記述してロードする方法がいいと思っている. dein.tomlは次のように記述した.
+<pre>
+<code>
+[[plugins]]
+repo = 'Shougo/dein.vim'
+
+[[plugins]]
+repo = 'Shougo/denite.nvim'
+hook_add = '''
+nmap &ltsilent&gt ,f :&ltC-u&gtDenite file/rec&ltCR&gt
+nmap &ltsilent&gt ,g :&ltC-u&gtDenite grep&ltCR&gt
+nmap &ltsilent&gt ,t :&ltC-u&gtDenite file/type&ltCR&gt
+nmap &ltsilent&gt ,b :&ltC-u&gtDenite buffer&ltCR&gt
+nmap &ltsilent&gt ,l :&ltC-u&gtDenite line&ltCR&gt
+" Define mappings
+autocmd FileType denite call s:denite_my_settings()
+function! s:denite_my_settings() abort
+  nnoremap &ltsilent&gt&ltbuffer&gt&ltexpr&gt &ltCR&gt
+        \ denite#do_map('do_action')
+  nnoremap &ltsilent&gt&ltbuffer&gt&ltexpr&gt d
+        \ denite#do_map('do_action', 'delete')
+  nnoremap &ltsilent&gt&ltbuffer&gt&ltexpr&gt p
+        \ denite#do_map('do_action', 'preview')
+  nnoremap &ltsilent&gt&ltbuffer&gt&ltexpr&gt q
+        \ denite#do_map('quit')
+  nnoremap &ltsilent&gt&ltbuffer&gt&ltexpr&gt i
+        \ denite#do_map('open_filter_buffer')
+  nnoremap &ltsilent&gt&ltbuffer&gt&ltexpr&gt &ltSpace&gt
+        \ denite#do_map('toggle_select').'j'
+endfunction
+
+autocmd FileType denite-filter call s:denite_filter_my_settings()
+function! s:denite_filter_my_settings() abort
+  " toggle_select
+  inoremap &ltsilent&gt&ltbuffer&ltexpr&gt &ltC-j&gt denite#do_map('toggle_select')
+  " 一つ上のディレクトリを開き直す
+  inoremap &ltsilent&gt&ltbuffer&gt&ltexpr&gt &ltBS&gt denite#do_map('move_up_path')
+  imap &ltsilent&gt&ltbuffer&gt &ltC-o&gt &ltPlug&gt(denite_filter_quit)
+  " Deniteを閉じる
+  inoremap &ltsilent&gt&ltbuffer&gt&ltexpr&gt &ltC-c&gt denite#do_map('quit')
+  nnoremap &ltsilent&gt&ltbuffer&gt&ltexpr&gt &ltC-c&gt denite#do_map('quit')
+endfunction
+" Change file/rec command.
+call denite#custom#var('file/rec', 'command',
+\ ['rg', '--files', '--glob', '!.git'])
+
+" Ripgrep command on grep source
+call denite#custom#var('grep', 'command', ['rg'])
+call denite#custom#var('grep', 'default_opts',
+    \ ['-i', '--vimgrep', '--no-heading'])
+call denite#custom#var('grep', 'recursive_opts', [])
+call denite#custom#var('grep', 'pattern_opt', ['--regexp'])
+call denite#custom#var('grep', 'separator', ['--'])
+call denite#custom#var('grep', 'final_opts', [])
+
+" Change default action. use floating
+let s:denite_win_width_percent = 0.85
+let s:denite_win_height_percent = 0.7
+let s:denite_default_options = {
+    \ 'split': 'floating',
+    \ 'winwidth': float2nr(&columns * s:denite_win_width_percent),
+    \ 'wincol': float2nr((&columns - (&columns * s:denite_win_width_percent)) / 2),
+    \ 'winheight': float2nr(&lines * s:denite_win_height_percent),
+    \ 'winrow': float2nr((&lines - (&lines * s:denite_win_height_percent)) / 2),
+    \ 'highlight_filter_background': 'DeniteFilter',
+    \ 'prompt': '$ ',
+    \ 'start_filter': v:true,
+    \ }
+call denite#custom#option('default', s:denite_default_options)
+" call denite#custom#kind('file', 'default_action', 'split')
+'''
+
+[[plugins]]
+repo = 'pangloss/vim-javascript'
+on_ft = ['javascript', 'javascript.jsx']
+
+[[plugins]] # mxwはpanglossと相性がよく,mxwでjsxのxmlシンタックスをカラーリングする
+repo = 'mxw/vim-jsx'
+on_ft = ['javascript', 'javascript.jsx']
+
+[[plugins]]
+repo = 'scrooloose/nerdtree'
+# nerdtreeを開始時に開く 
+# hook_add = '''
+# autocmd VimEnter * execute 'NERDTree'
+# '''
+
+# tomlのシンタックスカラーリング
+[[plugins]]
+repo = 'cespare/vim-toml'
+on_ft = 'toml'
+
+[[plugins]] # カーソルの位置のコンテキストに合わせてftを切り替える
+repo = 'osyo-manga/vim-precious'
+depends = ['context_filetype.vim']
+
+[[plugins]] # カーソルの位置のコンテキストのftを判定するライブラリ 
+repo = 'Shougo/context_filetype.vim'
+
+# [[plugins]] # カラースキーマ
+# repo = 'w0ng/vim-hybrid'
+# hook_add = '''
+# set background=dark
+# " colorschme せっていは source 後に行う必要があるので VimEnterで行う
+# " 但し Colorscheme イベントが抑制されないよう nested を付ける 
+# au MyAutoCmd VimEnter * nested colorscheme hybrid
+# '''
+</code>
+</pre>
+
+<p> dein_lazy.tomlには次のように記述した. プラグイン読み込みをスタート時に全て読み込むのではなく必要時に読み込むことで起動を早くする.
+<pre>
+<code>
+[[plugins]]
+repo = 'cohama/lexima.vim'
+on_i = 1
+hook_post_source = '''
+call lexima#add_rule({'at':'\%#.*[-0-9a-zA-Z_,:]','char':'{','input':'{'})
+call lexima#add_rule({'at':'\%#.*[-0-9a-zA-Z_,:]','char':'(','input':'('})
+call lexima#add_rule({'at':'\%#.*[-0-9a-zA-Z_,:]','char':'[','input':'['})
+call lexima#add_rule({'at':'\%#.*[-0-9a-zA-Z_,:]','char':'"','input':'"'})
+call lexima#add_rule({'at': '\%#.*[-0-9a-zA-Z_,:]', 'char': "'", 'input': "'"})
+'''
+
+[[plugins]]
+repo = 'Shougo/deoplete.nvim'
+hook_source = '''
+  let g:deoplete#enable_at_start_up = 1
+'''
+on_i = 1
+
+[[plugins]]
+repo = 'zchee/deoplete-jedi'
+hook_source = '''
+  let g:deoplete#sources#jedi#server_timeout = 20
+'''
+on_ft = 'python'
+
+# [[plugins]]
+# repo = "OmniSharp/omnisharp-vim"
+# on_ft = ["cs"]
+# build = "xbuild server/OmniSharp.sln"
+
+# [[plugins]]
+# repo = "Robzz/deoplete-omnisharp"
+# on_source = ["deoplete.nvim"]
+</code>
+</pre>
+
+<h2>参考</h2>
+<a href="https://qiita.com/delphinus/items/cd221a450fd23506e81a">https://qiita.com/delphinus/items/cd221a450fd23506e81a</a> dein.vimによるプラグイン管理のマイベストプラクティス
+<br><a href="https://qiita.com/delphinus/items/cd221a450fd23506e81a">https://qiita.com/delphinus/items/cd221a450fd23506e81a</a> hookの便利な使い方.
+<br><a href="https://qiita.com/musou1500/items/3f0b139d37d78a18786f">https://qiita.com/musou1500/items/3f0b139d37d78a18786f</a> deoplete-clangで快適C++エディット！！！
+</body>
+</html>

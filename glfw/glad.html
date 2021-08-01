@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>glad導入</title>
+<meta http-equive="content-type" charset="utf-8">
+<link rel="stylesheet" href="/css/hljs.css">
+<link rel="icon" href="/img/favicon.ico">
+</head>
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/tomorrow-night-blue.min.css">
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/highlight.min.js"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+<body>
+<p><a href="./">戻る</a>
+<h1>glad導入</h1>
+<p> gladの説明がどこも不親切なので, 自分なりに解説する. 周りが不親切なせいでこの解説も不親切になるかもしれなく負の連鎖. glad本家のgithubも何となく不親切だ. openglにはcoreバージョンとcompatibleバージョンが用意されている. coreバージョンは古い機能を切り捨てて新しい機能に最適化されたもので, compatibleは古い機能も残している. macOSでは残念ながらcoreは使えずcompatibleを使わないといけない. 
+
+<p> <a href="https://learnopengl.com/Getting-started/Creating-a-window">learn opengl: Createting a Window</a> を見てみる. gladを<a href="https://www.glfw.org/docs/latest/index.html">webservice</a>で生成する. LanguageはC++, SpecificationはOpenGL, APIはglで3.3以上を選択. ProfileはCompatibilityで. あとはOptionsでGenerate a loaderにチェツクが入っていることを確認してGENERATEボタンをおす. ファイルがダウンロードされる.
+<p> 次のようなディレクトリ構造を持つ. 
+<pre>
+<code>
+glad
+├── include
+│   ├── KHR
+│   │   └── khrplatform.h
+│   └── glad
+│       └── glad.h
+└── src
+    └── glad.c
+</code>
+</pre>
+<p> これをどうやって導入するかは大体面倒な説明となる. glad側がbrewで配布してくれたら楽なのだが, 人それぞれで生成したいloaderは異なるので手動で導入する必要がある. まずincludeディレクトリ内のKHRとgladフォルダどちらもシステムincludeディレクトリに入れる必要がある. ここでシステムincludeディレクトリとは? という話だが, 基本的にbrewでライブラリを導入すると/usr/local/include にはヘッダファイルが, /usr/local/lib にはライブラリがインストールされている. つまり, /usr/local/includeにKHRとgladを突っ込めということで簡単なのだが, /usr/local 以下はあまり汚したくない環境であり別の部分に入れる人も多い. その説明は野良ライブラリのビルドと導入で説明した. glad.cはプロジェクト毎に入れていちいちコンパイルする方針としている. 
+
+
+<p> <a href="https://learnopengl.com/Getting-started/Hello-Window">learn opengl: Hello Window</a> をみると次のプログラムが用意されている. learnopenglはグラフィック関係のどこもかしこも不親切な説明しかない中, 唯一の良心と言っていい. 
+<pre>
+<code>
+#include &ltglad/glad.h&gt
+#include &ltGLFW/glfw3.h&gt
+
+#include &ltiostream&gt
+
+void framebuffer_size_callback(GLFWwindow* window, int width, int height);
+void processInput(GLFWwindow *window);
+
+// settings
+const unsigned int SCR_WIDTH = 800;
+const unsigned int SCR_HEIGHT = 600;
+
+int main()
+{
+    // glfw: initialize and configure
+    // ------------------------------
+    glfwInit();
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+
+#ifdef __APPLE__
+    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+#endif
+
+    // glfw window creation
+    // --------------------
+    GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL", NULL, NULL);
+    if (window == NULL)
+    {
+        std::cout &lt&lt "Failed to create GLFW window" &lt&lt std::endl;
+        glfwTerminate();
+        return -1;
+    }
+    glfwMakeContextCurrent(window);
+    glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+
+    // glad: load all OpenGL function pointers
+    // ---------------------------------------
+    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
+    {
+        std::cout &lt&lt "Failed to initialize GLAD" &lt&lt std::endl;
+        return -1;
+    }    
+
+    // render loop
+    // -----------
+    while (!glfwWindowShouldClose(window))
+    {
+        // input
+        // -----
+        processInput(window);
+
+        // render
+        // ------
+        glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT);
+
+        // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
+        // -------------------------------------------------------------------------------
+        glfwSwapBuffers(window);
+        glfwPollEvents();
+    }
+
+    // glfw: terminate, clearing all previously allocated GLFW resources.
+    // ------------------------------------------------------------------
+    glfwTerminate();
+    return 0;
+}
+
+// process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
+// ---------------------------------------------------------------------------------------------------------
+void processInput(GLFWwindow *window)
+{
+    if(glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+        glfwSetWindowShouldClose(window, true);
+}
+
+// glfw: whenever the window size changed (by OS or user resize) this callback function executes
+// ---------------------------------------------------------------------------------------------
+void framebuffer_size_callback(GLFWwindow* window, int width, int height)
+{
+    // make sure the viewport matches the new window dimensions; note that width and 
+    // height will be significantly larger than specified on retina displays.
+    glViewport(0, 0, width, height);
+}
+</code>
+</pre>
+<p> Makefileを作成する. MacではOpenGL, CoreVideo, IOKit, Cocoaフレームワークをコンパイル時にリンクしなくてはならない. それはシステムにディフォルトで搭載されているものでインストールの必要はない. 
+<pre>
+<code>
+CXXFLAGS = -g -Wall -std=c++11 
+LDLIBS = -lglfw -framework OpenGL \
+				 -framework CoreVideo -framework IOKit -framework Cocoa
+OBJECTS = $($(shell find ./ -name *.cpp -or -name *.c ):.c=.o)
+
+all: main
+.PHONY: clean 
+
+$(TARGET): $(OBJECTS) 
+	$(LINK.cc) $^ $(LOADLIBES) $(LDLIBS) -o $@
+
+
+</code>
+</pre>
+<p>glfwの前にgladをincludeしろということらしい. gladはopengl関係のAPIのヘッダをインクルードするため, glfw側がglのヘッダがインクルードされたかどうかを判断してくれるのでいいが, glad側が判断してくれる訳ではない. 
+<pre>
+<code>
+#include &ltglad/glad.h&gt
+#include &ltGLFW/glfw3.h&gt
+</code>
+</pre>
+</body>
+</html>

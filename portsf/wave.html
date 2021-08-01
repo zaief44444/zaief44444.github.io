@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>waveライブラリ</title>
+<meta http-equive="content-type" charset="utf-8">
+<link rel="stylesheet" href="/css/hljs.css">
+<link rel="icon" href="/img/favicon.ico">
+</head>
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/tomorrow-night-blue.min.css">
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/highlight.min.js"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+<body>
+  <p><a href="./">戻る</a>
+<h1>waveライブラリ</h1>
+<p>June 3, 2020
+<p>waveライブラリというこれまた自前ライブラリが用意されている. 見た感じではサンプル単位でtickを呼び出すため関数呼び出しコストが高いと思われる. 1サンプルではなくportaudioのコールバックのバッファのように多くのサンプルをまとめて生成して呼び出し機会を減らすべき. このライブラリはポインターを返すため自分でfreeを呼び出さなくてはならない. C++でなくCで書かれているためクラスではなく構造体を使う. 構造体にメンバ関数を入れるのではなく, 別の関数にポインターを引数として入れて操作している. 実にCなライブラリだ. 
+<pre>
+<code>
+/* wave.h: defintion of oscillator types and associated waveform generation functions  */
+#ifndef __WAVE_H_INCLUDED__
+#define	__WAVE_H_INCLUDED__
+
+#ifdef __cplusplus
+extern "C" {	
+#endif
+
+
+#ifndef M_PI
+#define M_PI  (3.1415926535897932)
+#endif
+
+#ifndef TWOPI
+#define TWOPI (2.0 * M_PI)
+#endif
+
+/* definition of the oscillator type */
+typedef struct  t_oscil 
+{
+	double srate;
+	double twopiovrsr;
+	double curfreq;
+	double curphase;
+	double incr;
+} OSCIL;
+
+/* returns pointer to an OSCIL object created on the heap. Release the memory by passing the pointer to free().*/
+OSCIL*  new_oscil(double srate);
+/* waveform tick functions, called per sample at the stated srate */
+double sinetick  (OSCIL* p_osc, double freq);
+double sqtick    (OSCIL* p_osc, double freq);
+double sawdtick  (OSCIL* p_osc, double freq);
+double sawutick  (OSCIL* p_osc, double freq);
+double trunctick (OSCIL* p_osc, double freq);
+double tritick   (OSCIL* p_osc, double freq);
+/* function pointer for tick funcs */
+typedef double (*tickfunc)(OSCIL* osc,double);
+
+#ifdef __cplusplus
+}	
+#endif
+
+#endif
+</code>
+</pre>
+<p>wave.c
+<pre>
+<code>
+/* wave.c */
+#include &ltstdio.h&gt
+#include &ltstdlib.h&gt
+#include &ltmath.h&gt
+#include &ltsys/timeb.h&gt
+#include &ltwave.h&gt
+
+/* local typing-saving macro for tick functions */
+#define OSC_WRAPPHASE  if(p_osc-&gtcurphase &gt TWOPI) p_osc-&gtcurphase -= TWOPI;	\
+						if(p_osc-&gtcurphase &lt 0.0) p_osc-&gtcurphase += TWOPI
+
+OSCIL*   new_oscil(double srate)
+{
+	OSCIL* p_osc;
+
+	p_osc = (OSCIL*) malloc(sizeof(OSCIL));
+	if(p_osc==NULL)
+		return NULL;
+	p_osc-&gttwopiovrsr = TWOPI / srate;
+	p_osc-&gtcurfreq = 0.0;
+	p_osc-&gtcurphase = 0.0;
+	p_osc-&gtincr = 0.0;
+	return p_osc;
+}
+
+/*********** SINE **************/
+
+double sinetick(OSCIL* p_osc, double freq)
+{
+	double val;
+
+	val = sin(p_osc-&gtcurphase);
+	if(p_osc-&gtcurfreq != freq){
+		p_osc-&gtcurfreq = freq;
+		p_osc-&gtincr = p_osc-&gttwopiovrsr * freq;		
+	}	
+	p_osc-&gtcurphase += p_osc-&gtincr;
+	OSC_WRAPPHASE;
+	return val;
+}
+
+/******** SQUARE ************/
+double sqtick(OSCIL* p_osc, double freq)
+{
+	double val;
+
+	if(p_osc-&gtcurfreq != freq){
+		p_osc-&gtcurfreq = freq;
+		p_osc-&gtincr = p_osc-&gttwopiovrsr * freq;		
+	}
+
+	if(p_osc-&gtcurphase &lt= M_PI)
+		val = 1.0;
+	else
+		val = -1;
+	p_osc-&gtcurphase += p_osc-&gtincr;
+	OSC_WRAPPHASE;
+	return val;
+}
+/******* SAWTOOTH DOWNWARDS **********/
+double sawdtick(OSCIL* p_osc, double freq)
+{
+	double val;
+
+	if(p_osc-&gtcurfreq != freq){
+		p_osc-&gtcurfreq = freq;
+		p_osc-&gtincr = p_osc-&gttwopiovrsr * freq;		
+	}
+	val =  1.0 - 2.0 * (p_osc-&gtcurphase * (1.0 / TWOPI) );
+	p_osc-&gtcurphase += p_osc-&gtincr;
+	OSC_WRAPPHASE;
+	return val;
+}
+
+/********** SAWTOOTH UPWARDS **********/
+
+double sawutick(OSCIL* p_osc, double freq)
+{
+	double val;
+
+	if(p_osc-&gtcurfreq != freq){
+		p_osc-&gtcurfreq = freq;
+		p_osc-&gtincr = p_osc-&gttwopiovrsr * freq;		
+	}
+	val =  (2.0 * (p_osc-&gtcurphase * (1.0 / TWOPI) )) - 1.0;
+	p_osc-&gtcurphase += p_osc-&gtincr;
+	OSC_WRAPPHASE;
+	return val;
+}
+
+/************ TRIANGLE **************/
+
+double tritick(OSCIL* p_osc, double freq)
+{
+	double val;
+
+	if(p_osc-&gtcurfreq != freq){
+		p_osc-&gtcurfreq = freq;
+		p_osc-&gtincr = p_osc-&gttwopiovrsr * freq;		
+	}
+
+	if(p_osc-&gtcurphase &lt= M_PI)	{
+		val =   (4.0 * (p_osc-&gtcurphase * (1.0 / TWOPI) )) - 1.0;
+	}
+	else {
+		val =  3.0 - 4.0 * (p_osc-&gtcurphase * (1.0 / TWOPI) );
+	}
+	p_osc-&gtcurphase += p_osc-&gtincr;
+	OSC_WRAPPHASE;
+	return val;
+}
+</code>
+</pre>
+<h2>仕様</h2>
+<p>OSCIL* new_ocil(double srate) はサンプルレートからオシレーターのサンプルごとの位相変位などを決めて初期化し, OSCIL型ポインターを返す. 取得に失敗すればNULLを返す. 取得したら自分でfreeを呼び出さなくてはならない.
+<p>double sinetick(OSCIL* p_osc, double freq) はオシレーターを1サンプル進める, つまり1/サンプルレート秒進める. しかし, オシレーターのcurphaseは位相単位で取り扱うため 2pi * 周波数/サンプルレート 進められる. 第二引数の周波数がp_oscと違うならば新しい周波数のオシレーターに変化する. 戻り値が今の振幅の変位を表す. 
+<p>sqtick
+<p>記述途中
+double sinetick  (OSCIL* p_osc, double freq);
+double sqtick    (OSCIL* p_osc, double freq);
+double sawdtick  (OSCIL* p_osc, double freq);
+double sawutick  (OSCIL* p_osc, double freq);
+double trunctick (OSCIL* p_osc, double freq);
+double tritick   (OSCIL* p_osc, double freq);
+/* function pointer for tick funcs */
+typedef double (*tickfunc)(OSCIL* osc,double);
+</body>
+</html>

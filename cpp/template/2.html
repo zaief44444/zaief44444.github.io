@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>テクニック</title>
+<meta http-equive="content-type" charset="utf-8">
+<link rel="stylesheet" href="/css/hljs.css">
+<link rel="icon" href="/img/favicon.ico">
+</head>
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/tomorrow-night-blue.min.css">
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/highlight.min.js"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+<link rel="stylesheet" href="/css/hljs.css">
+<body>
+<p><a href="./">戻る</a>
+<h1>テクニック</h1>
+<p> July 24, 2020
+<p> キャスト
+
+<pre>
+<code>
+template &ltclass To, class From&gt
+To safe_reinterpret_cast(From from)
+{
+  assert(sizeof(From)) &lt= sizeof(To));
+  return reinterpret_cast&ltTo&gt(From);
+}
+</code>
+</pre>
+<p> 
+
+<pre>
+<code>
+template &ltclass To, class From&gt
+To safe_reinterpret_cast(From from)
+{
+  assert(sizeof(From)) &lt= sizeof(To));
+  return reinterpret_cast&ltTo&gt(From);
+}
+...
+void* somePointer = ...;
+char c = safe_reinterpret_cast&ltchar&gt(somePOinter);
+
+</code>
+</pre>
+
+<p> テンプレートは写像と考えられる. Tは型だが, テンプレートクラス型を受け取るテンプレートも作ることができる. これは 写像自体を引数と考える写像も考えられる. さらにそのような写像を定義域として...とも考えられる. 写像Aの引数が写像Bの場合は, 写像Bの引数の情報がいらないこともある. 実は使わないなら特殊化しなくてもいい.
+<p> テンプレートの特殊化は, 写像の一部に代入することに当てはまる.
+<p> 関数のオーバーロードはテンプレートに似た機能だが, むしろ正反対の方向をいく機能でありテンプレートは同じような機能を似た文脈で実現するのに対し, オーバーロードは別の機能を似た文脈で実現する.
+
+<p> テンプレートと継承がどのような考え方に基づいているのかを考えてみる. 
+
+<h2>2.3 ローカルクラス</h2>
+<p> C++では関数の内部でもクラスを定義でき, それをローカルクラスという. 
+
+<pre>
+<code>
+void Fun() {
+  class Local
+  {
+    ...メンバ変数...
+    ...メンバ関数定義...
+  }
+  ...Localを使用するコード
+}
+</code>
+</pre>
+<p> staticメンバを使うことはできないが, テンプレート関数だった場合そのテンプレートパラメータをローカルクラス内で使うことができる.
+<pre>
+<code>
+class Interface {
+public:
+  virtual void Fun() = 0;
+  ...
+};
+template &ltclass T, class P&gt
+Interface* MakeAdapter(const T& obj, const P& arg) {
+  class Local : public Interface
+  {
+    Local(const T& obj, const P& arg)
+      : obj_(obj), arg_(arg) {}
+    virtual void Fun()
+    {
+      obj_.Call(arg_);
+    }
+  private:
+    T obj_;
+    P arg_;
+  };
+  return new Local(obj, arg);
+}
+</code>
+</pre>
+
+<p> ローカルクラス自体がすでに閉じている構造を持っており, シンボルの局所性に優れている.
+
+<p> そういえば, 関数ポインターは写像自体を扱うものとして重要だったなと.
+<h2>2.4 整数定数の型へのマッピング</h2>
+<p> テンプレートは写像的性質そのものなのだが, 実際に使ってみる.
+<pre>
+<code>
+template &ltint v&gt
+struct Int2Type
+{
+  enum { value = v };
+};
+</code>
+</pre>
+<p> テンプレートの型情報はコンパイル時に決定されるものなので, 静的ディスパッチが可能.
+<p> 静的なものを動的に生成できる, できている, という意味で静的ディスパッチと呼ばれる. 通常は, 動的なものからは動的なものを作るしかないのにもかかわらず.
+ 
+<p> 次のようなコンテナクラスがあったとする.
+
+<pre>
+<code>
+template &ltclass T&gt class NiftyContainer { ... }
+</code>
+</pre>
+<p> コンテナのコピーでは, 各オブジェクトをどのようにコピーするのかはTによってしまう. Tがポリモーフィズム型の場合はClonse()で, 非ポリモーフィズム型の場合はコピーコンストラクタで生成するることになる.
+<pre>
+<code>
+template &lttypename T, bool isPolymorphic&gt
+class NiftyContainer {
+  void Do Something() {
+    T* pSomeObj = ...;
+    if (isPolymorphic)
+    {
+      T p* NewObj = pSomeObj-&gtClone();
+      ...ポリモーファズム版アルゴリズム...
+    } else {
+      T* pNewObj = new T(*pSomeObj);
+      ...非ポリモーフィズム版アルゴリズム...
+    }
+  }
+};
+</code>
+</pre>
+<p> この実装は失敗する. Clone()が用意されていないにもかかわらずコンパイル時に呼び出してしまうから. コピーコンストラクタが禁止されている場合は後者のコンパイルで失敗する. 次のようにしてうまくいく.
+
+<pre>
+<code>
+template &lttypename T, bool isPolymorphic&gt
+class NiftyContainer {
+private:
+  void DoSomething(T* pObj, Int2Type&lttrue&gt) {
+    T p* NewObj = pSomeObj-&gtClone();
+    ...ポリモーフィズム版アルゴリズム...
+  } 
+  void DoSomething(T* pObj, Int2Type&ltfalse) {
+    T* pNewObj = new T(*pSomeObj);
+    ...非ポリモーフィズム版アルゴリズム...
+  }
+public:
+  void DoSomething(T* pObj)
+  {
+    DoSomething(pObj, Int2Type&ltisPolymorphic&gt());
+  }
+};
+</code>
+</pre>
+<p> コンパイル時の場合分けはディレクティブでも可能かもしれないが, テンプレートの方が構造化ができている. 
+<p> セマンティクスレベルでのポリモーフィズムは関数ポインターやアップキャストで実現できたが, このようにシンタックスレベルのポリモーフィズムが実現できた. シンタックスレベルではテンプレートによるポリモーフィズムの実現とともに, テンプレートによる文脈に応じた区別が実現できている.
+<h2>2.5 型から型へのマッピング</h2>
+<p>  テンプレート関数の特殊化は引数型部分にしか限られており, 返却型は特殊化できないのであった. これはテンプレートクラスはクラス型で決まっていたのに対し, 関数型の返却型が決定していない段階では特殊化にはなっていない. しかしながら, 実現できないだろうか.
+<pre>
+<code>
+template &ltclass T, class U&gt
+T* Create(const U& arg)
+{
+  return new T(arg);
+}
+</code>
+</pre>
+<p> 次のType2Typeを考える.
+
+<pre>
+<code>
+template &lttypename T&gt
+struct Type2Type
+{
+  typedef T OriginalType;
+}
+</code>
+</pre>
+<p> Type2Type には値が存在しないが, テンプレートに入れることで異なった型を識別できる. 型というのはコンパイル情報だ, ということをより強く意識する結果となる.
+<pre>
+<code>
+template &ltclass T, class U&gt
+T* Create(const U& arg, Type2Type&ltt&gt)
+{
+  return new T(arg);
+}
+template &ltclass U&gt
+Widget* Create(const U& arg, Type2Type&ltWidget&gt)
+{
+  return new Widget(arg, -1);
+}
+String* pStr = Create("Hello", Type2Type&ltString&gt());
+Widget* pW = Create(100, Type2Type&ltWidget&gt());
+</code>
+</pre>
+<h2>型の選択</h2>
+<p> NiftyContainerでvectorを使う時, ポリモーフィズム型に対してはポインタ型, そうでないものは値型で管理したい. 以前の方法でまずは実装してみる.
+
+<pre>
+<code>
+template &lttypename T, bool isPolymorphic&gt
+struct NiftyContainerValueTraits
+{
+  typdedef T* ValueType;
+};
+template &lttypename T&gt
+struct NiftyContainerValueTraits&ltT, false&gt
+{
+  typedef T ValueType;
+};
+template &lttypename T, bool isPolymorphic&gt
+class NiftyContainer
+{
+  ...
+  typedef NiftyContainerValueTraits&ltT, isPolymorphic&gt Traits;
+  typedef typename Traits::ValueType ValueType;
+};
+</code>
+</pre>
+<p> このように逐次的に型を選択した書き方は直感的な一方で型を選択するたびに新たなテンプレートを作成するため面倒だ.
+
+<pre>
+<code>
+template &ltbool flag, typename T, typename U&gt
+struct Select
+{
+  typedef T Result;
+};
+templalte &lttypename T, typename U&gt
+struct Select&ltfalse, T, U&gt
+{
+  typedef U Result;
+}
+template &lttypename T, bool isPolymorphic&gt
+class NiftyContainer
+{
+  ...
+  typedef typename Select&ltisPolymorphic, T*, T&gt::Result ValueType;
+  ...
+}
+</code>
+</pre>
+<p> この方法は, 型の選択が本質的な部分であることに着目している. そしてtypedefを駆使することによって型の選択が決定される. 型情報からさらなる型情報が選択されていく, という流れはコンパイル時に型を選ぶif文が使えるようなもので, 強力だ. コンパイルという静的な処理の中で動的な処理が実現できる, ということがこのようにわかる.
+
+<h2>2.7 コンパイル時における変換可能性と継承の検出</h2>
+<p> 
+</body>
+</html>

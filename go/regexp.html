@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Go言語正規表現解説</title>
+<meta http-equive="content-type" charset="utf-8">
+<link rel="stylesheet" href="/css/hljs.css">
+<link rel="icon" href="/img/favicon.ico">
+</head>
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/tomorrow-night-blue.min.css">
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/highlight.min.js"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+<body>
+<p><a href="./">戻る</a>
+<h1>Go言語正規表現解説</h1>
+<p> Nov 14, 2020
+<p> コンピューターにとっての文字列は人間にとっての視覚情報に相当する. 視覚情報から欲しい情報を探すことは人間が自然にやっているプロセスだが, コンピューターは正規表現で文字列を探し出し抽出する操作を定義しなくてはならない.
+<p> <a href="https://ashitani.jp/golangtips/tips_regexp.html">逆引きGolang (正規表現)</a> が参考になる.
+<p> Goでは文字列は""と``を使い, シングルクォートの''はrune(UTF8文字)を表すことに注意しよう. ""通常の文字列, ''は特殊文字を一切解釈しない未加工文字列リテラルだ.
+
+<p> まず, 目的が置換ならregexpパッケージを使うよりもstring.Replacerを使う方がずっと早いと言われているが, あまり機能がないので結局regexpを使うことが多いと思う.
+
+<p> マッチしているかの判定のみ
+<pre>
+<code>
+import "regexp"
+
+r := regexp.MustComtile(`abc`)
+fmt.Println(r.MatchString("hello")) // false
+fmt.Println(r.MatchString("hello abc")) // true
+</code>
+</pre>
+<p> rは正規表現であり, MatchString("")でどの文字列から探すのかを指定する.
+
+<p> マッチした文字列を抽出する.
+
+<p> テキスト中のマッチした文字列を置換する.
+
+<p> 例:テキストからURLにマッチさせる. 参考: <a href="https://qiita.com/str32/items/a692073af32757618042">正規表現まとめ ＋ メールアドレスとURLの正規表現例</a>
+
+<pre>
+<code>
+package main
+
+import (
+	"fmt"
+	"regexp"
+)
+
+func main() {
+  text := "AAA https://zaief.jp BBB正規表現のテスト"
+
+  re := regexp.MustCompile(`http(s)?://([\w-]+\.)+[\w-]+(/[\w-+;./?%&=~]*)?`)
+	fmt.Printf("Pattern: %v\n", re.String()) // print pattern
+	fmt.Println(re.MatchString(text)) // true
+	linktagtext := re.ReplaceAllString(text, "&lta href=${0}&gt${0}&lt/a&gt")
+  fmt.Println(linktagtext)
+
+}
+
+</code>
+</pre>
+</body>
+</html>

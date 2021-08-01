@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>vimrc解説</title>
+<meta http-equive="content-type" charset="utf-8">
+<link rel="icon" href="/img/favicon.ico">
+<link rel="stylesheet" href="/css/simple.css">
+</head>
+<body>
+<p><a href="./">戻る</a>
+<h1>vimrc解説</h1>
+<p>Dec 14, 2019
+
+<p> .vimrcとはvimの設定ファイルでここに自分の好きな設定を記述することになる. neovimならinit.vimに記述する. 私は以下の設定にしている.
+<pre>
+<code>
+set number
+set autoindent
+set tabstop=2
+set shiftwidth=2
+set expandtab
+set clipboard=unnamed
+set hls
+set smarttab
+set smartindent
+set clipboard+=unnamedplus
+"makefileの時はtabのままにする
+let _curfile = expand("%:t")
+if _curfile =~ "Makefile" || _curfile =~ "makefile" || _curfile =~ ".*\.mk"
+  set noexpandtab
+endif
+imap &ltC-b&gt &ltLeft&gt
+imap &ltC-f&gt &ltRight&gt
+"no highlight esc x 2
+nnoremap &ltsilent&gt&ltESC&gt&ltESC&gt :nohl&ltCR&gt
+"一見意味ないような設定だがcohama/leximal.vimは&ltBS&gtを使って設定されているので
+"&ltC-h&gtもそれと同じように機能させる. inoremapでなくimapでないと機能しない
+imap &ltC-h&gt &ltBS&gt
+"()の対応を表示する機能が見づらすぎるので切る(terminal上で)
+if !has('gui_running')
+  let g:loaded_matchparen = 1
+endif
+"マウスのミドルクリックによる貼り付けは大体不意なのでやめる
+map &ltMiddleMouse&gt &ltNop&gt
+map &lt2-MiddleMouse&gt &ltNop&gt
+map &lt3-MiddleMouse&gt &ltNop&gt
+map &lt4-MiddleMouse&gt &ltNop&gt
+imap &ltMiddleMouse&gt &ltNop&gt
+imap &lt2-MiddleMouse&gt &ltNop&gt
+imap &lt3-MiddleMouse&gt &ltNop&gt
+imap &lt4-MiddleMouse&gt &ltNop&gt
+"w!!でsudoで保存
+cabbr w!! w !sudo tee &gt /dev/null %
+" SwapファイルやBackupファイルは前時代的すぎるので全て無効化する
+set nowritebackup
+set nobackup
+set noswapfile
+" 一文字消すだけなのに無名レジスタを上書きされるのは嫌なのでブラックホールレジスタに入れる
+nnoremap x "_x
+nnoremap X "_X
+
+nnoremap j gj
+nnoremap k gk
+
+</code>
+</pre>
+
+<h2>置換について</h2>
+<p> vimは置換時に&ampをエスケープしなくてはならない, 記号が色々混じってエスケープがわかりにくいときは:%sno/search_string/replace_string/gで置換するのが良い. 例:
+<code>
+:%sno/&lt/&amplt/gc
+</code>
+<p> この例は今まさにhtmlを書くときにこれを使って置換している. 私はgの後にcも入力して確認を入れることが多い. 
+<a href="https://stackoverflow.com/questions/6254820/perform-a-non-regex-search-replace-in-vim">参考記事</a>
+<h2>バイナリ編集</h2>
+<p>バイナリを操作することもできる. バイナリダンプ自体はshellコマンドのhexdumpだとかxxdだとかを使えばいいが, vimでは編集もできる. <a href="https://rdera.hatenadiary.org/entry/20081022/1224682665">https://rdera.hatenadiary.org/entry/20081022/1224682665</a> がわかりやすい. vimscriptの勉強にもなる. 以下の様に設定した. 説明は先のリンクにあるので略.
+<pre>
+<code>
+autocmd  FileType help setlocal number
+augroup BinaryXXD
+  autocmd!
+  autocmd BufReadPre *.bin let &binary =1
+  " -g 1で1byte表示, defaultは2byte
+  autocmd BufReadPost * if &binary | silent %!xxd -g 1
+  autocmd BufReadPost * set ft=xxd | endif
+  autocmd BufWritePre * if &binary | %!xxd -r | endif
+  autocmd BufWritePost * if &binary | silent %!xxd -g 1
+  autocmd BufWritePost * set nomod | endif
+augroup END
+</code>
+</pre>
+<h2>vimリンク集</h2>
+<p> <a href="https://qiita.com/nab/items/0deb466575a8cf88b522#_reference-d9e966e6eebd1e4ffedb">https://qiita.com/nab/items/0deb466575a8cf88b522#_reference-d9e966e6eebd1e4ffedb</a>
+</body>
+</html>

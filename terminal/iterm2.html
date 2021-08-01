@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>iTerm2解説</title>
+<meta http-equive="content-type" charset="utf-8">
+<link rel="icon" href="/img/favicon.ico">
+<link rel="stylesheet" href="/css/simple.css">
+</head>
+<body>
+<p><a href="./">戻る</a>
+<h1>iTerm2解説</h1>
+<p> Apr 1, 2020
+<p> Macでは標準でTerminal.Appというターミナルが使えるがiTerm2を使うのがデファクトスタンダードとなっている. iTerm2ショートカットキーが素晴らしく, ペイン分割も簡単にできドッキングもできるのでtmuxを導入するよりも快適環境を構築できる. ターミナル環境に関しては情報が豊富にあるので適切な記事を探せば解決するのでいくつか参考になる記事を挙げていきつつ解説する.
+
+<h2>iTerm2を導入する</h2>
+<p> <a href="https://www.iterm2.com/">https://www.iterm2.com/</a> からダウンロードするだけ. ショートカットキーを紹介する:
+<ul>
+  <li>cmd + d で | 分割する</li>
+  <li>cmd + shift + d で - 分割する</li>
+  <li>cmd + [ や cmd + ] でペイン移動</li>
+  <li>cmd + t で新しいタブ生成</li>
+  <li>control + tabでタブ移動</li>
+  <li>cmd + w でペインやタブを閉じる</li>
+  <li>cmd + Return で全画面と通常画面をトグル</li>
+  <li>control + h でバックスペース</li>
+  <li>control + a で入力先頭へ移動</li>
+  <li>control + e で入力末尾へ移動</li>
+  <li>control + k でカーソルより後方を削除</li>
+  <li>control + f でカーソル前方移動</li>
+  <li>control + b でカーソル後方移動</li>
+  <li>control + pコマンド履歴を遡る</li>
+  <li>control + nコマンド履歴を進む</li>
+</ul>
+
+<h2>Homebrewを導入する</h2>
+<p> HomebrewとはMacのソフトウェアのパッケージマネージャでターミナルで使うアプリケーションはHomebrewを使ってインストールする. パッケージマネージャのおかげでシステムが古いバージョンのソフトウェアに依存していても干渉することなく新しいバージョンのソフトウェアを入れられたりインストールやアンインストールがコマンド一つで簡単にできたりとこれを使わない手はない. 
+
+<p> まずHomebrewを使うにはXcodeというツールを導入する必要がある. XcodeとはMacのソフトウェア導入時にコンパイルやリンクするのに必要なツールだ. App StoreからXcodeをインストールする. インストールは時間がかかるので何か好きなことをやって終わり次第次のコマンドを打ち込む. 警告が出るかもしれないが, その時はXcodeを開いて利用規約にアグリーしておく. 実はXcodeをインストールしなくても次のコマンドだけでOKだというお話があるが, ビルド環境が後々必要になったりするので今のうちに導入してしまおう. 
+<pre>
+<code>
+xcode-select --install
+</code>
+</pre>
+
+<p> これでXcodeが導入された. <a href="https://brew.sh/index_ja.html">https://brew.sh/index_ja.html</a> へ行き指示へ従いHomebrewをインストールする. 
+
+<p> Homebrewをインストールするとbrewコマンドが使えるようになる. brewコマンドを使ってこれから様々なソフトをインストールする.
+
+<h2>zshを導入する</h2>
+<p> 多くのシェル環境では標準でbashがよく使われているが, 最近はzshを標準にすることも増えてきた. 実はbashは2014年あたりにShellshockという致命的なバグが発見されこのことから標準をより新しいzshへ移行したのだろう. iTerm2でも標準はzshを使っている. しかしながらこのzshはシステムに元々入っていたものを使っているだけで本当に新しいものはbrewで導入する必要がある. 早速使ってみよう. 
+<pre>
+<code>
+brew install zsh
+</code>
+</pre>
+
+<p> 次にvimを使ってシェルの設定ファイルを編集する. vimの使い方は検索すれば記事が豊富に見つかるので使い方を覚えてからここへ戻ること. vimは最初はとても不便に感じるだろうが, 設定をいろいろ弄ることで快適な環境を築くことができる. vimに関しては別の記事で扱っている. 重要なファイルなので慎重に.
+<pre>
+<code>
+sudo vim /etc/shells
+</code>
+</pre>
+
+<p> ファイル末尾に以下を追記
+<pre>
+<code>
+/usr/local/bin/zsh
+</code>
+</pre>
+
+<p> ログインシェルを変更
+<pre>
+<code>
+chsh -s /usr/local/bin/zsh
+</code>
+</pre>
+
+<p> ここでiTerm2を閉じて再び開こう. 次のコマンドで現在のシェルが確認できる. 設定したシェルになっているはずだ.
+<pre>
+<code>
+echo $SHELL
+</code>
+</pre>
+
+<h2>Rictyフォントの導入</h2>
+<p> 標準のMonacoフォントでは日本語の文字の間隔が開きすぎて見辛い. よってRictyフォントに変更する. <a href="https://qiita.com/yu_haruchan/items/bc2fc9c55238002b6d18">https://qiita.com/yu_haruchan/items/bc2fc9c55238002b6d18</a> にしたがってインストールする. Rictyフォントは小さめなのでデフォルトの12ptを14ptへ変更するのがおすすめ.
+
+<h2>iTerm2再考</h2>
+<p> 今までいくつかコマンドを打ったと思うがいちいちiTerm2を開くのにクリックするのは面倒だ. またiTerm2は設定をどこですれば良いのか一貫性がなく酷いが, <a href="https://qiita.com/ruwatana/items/8d9c174250061721ad11">https://qiita.com/ruwatana/items/8d9c174250061721ad11</a> という素晴らしい記事があるのでそれに従うことを推奨する. 特にoption + spaceでiTerm2が開けるのが素晴らしく, cmd + tabによるアプリケーションのウィンドウ移動よりも瞬時で開くことができる.
+
+<h2>peco</h2>
+<p> pecoは検索機能プラグインであり, 例えばhistoryと合わせると履歴検索が便利になる. brew install pecoでインストールできる. 
+
+</body>
+</html>

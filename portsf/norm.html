@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>ノーマライズ</title>
+<meta http-equive="content-type" charset="utf-8">
+<link rel="stylesheet" href="/css/hljs.css">
+<link rel="icon" href="/img/favicon.ico">
+</head>
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/tomorrow-night-blue.min.css">
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/highlight.min.js"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+<body>
+  <p><a href="./">戻る</a>
+<h1>ノーマライズ</h1>
+<p>May 22, 2020
+<p> ノーマライズは音量を調整するだけの処理で最も基本的だ. しかし振幅と音量の関係は線型ではなく人間にとってはデシベル単位のほうが段階的に音量を感じることができる. dB = 20 * log10(amplitude) であり, 振幅は最大が1と考えてデシベルは常に負の値をとる. peakの振幅が1ならばpeakと音量がどれぐらい差があるのかがデシベルで表される. 音量はこのように絶対的な単位ではなく最大振幅1からの相対的な音量によって表される, と言うことを知る必要がある. これは周波数のように絶対的に440HzがC3の音であることと対比的である.
+<p> 次のコードは指定したデシベルでノーマライズするプログラムだ. 流れとしてはファイルを読み込み, peakを計算する. peakを1に正規化してデシベルでスケールしてノーマライズされたwavファイルを生成する.
+
+<pre>
+<code>
+/* sfnorm : normalize */
+#include &ltstdio.h&gt
+#include &ltstdlib.h&gt
+#include &ltportsf.h&gt
+#include &ltmath.h&gt
+
+#define NFRAMES (1024)
+enum {ARG_PROGNAME, ARG_INFILE, ARG_OUTFILE, ARG_DB, ARG_NARGS};
+double maxsamp(float* buf, unsigned long blocksize){
+  double absval, peak = 0.0;
+  for(int i=0; i &lt blocksize; i++) {
+    absval = fabs(buf[i]);
+    if(absval &gt peak)
+      peak = absval;
+  }
+  return peak;
+}
+
+int main(int argc, char* argv[])
+{
+  PSF_PROPS props;
+  long framesread;
+  unsigned long nframes = NFRAMES;
+  /* init all resource vars to default states */
+  int ifd = -1,ofd = -1;
+  int error = 0;
+  psf_format outformat = PSF_FMT_UNKNOWN;
+  PSF_CHPEAK* peaks = NULL;
+  float* frame = NULL;
+  double dbval, inpeak = 0.0;
+  float ampfac, scalefac;
+
+
+  printf("SFNORM: normalize by dB\n");
+
+  if(argc &lt ARG_NARGS) {
+    printf("insufficient arguments.\n"
+        "usage:\n\t"
+        "sfgain infile outfile dBval\n"
+        "\twhere dBval must be &lt= 0.0\n");
+    return 1;
+  }
+  dbval = atof(argv[ARG_DB]);
+  if(dbval &gt 0.0){
+    printf("Error: dBval cannot be positive.\n");
+    return 1;
+  }
+  ampfac = (float) pow(10.0, dbval/20.0);
+  /* be good, and startup portsf */
+  if(psf_init()){
+    printf("unable to start portsf\n");
+    return 1;
+  }
+
+  ifd = psf_sndOpen(argv[ARG_INFILE],&props,0);
+  if(ifd &lt 0){
+    printf("Error: unable to open infile %s\n",
+        argv[ARG_INFILE]);
+    return 1;
+  }
+  //  /* we now have a resource, so we use goto hereafter 
+  //   * on hitting any error */
+  //  /* tell user if source file is already floats */
+  //  if(props.samptype == PSF_SAMP_IEEE_FLOAT){
+  //    printf("Info: infile is already in floats format.\n");
+  //  }
+  //  props.samptype = PSF_SAMP_IEEE_FLOAT;
+  /* check outfile extension is one we know about */
+  outformat = psf_getFormatExt(argv[ARG_OUTFILE]);
+  if(outformat == PSF_FMT_UNKNOWN){
+    printf("outfile name %s has unknown format.\n"
+        "Use any of .wav, .aiff, .aif, .afc, .aifc\n",
+        argv[ARG_OUTFILE]);
+    error++;
+    goto exit;
+  }
+  props.format = outformat;
+
+
+  /* allocate space for one sample frame */
+  frame = (float*) malloc(nframes * props.chans * sizeof(float));
+  if(frame==NULL){
+    puts("No memory!\n");
+    error++;
+    goto exit;
+  }
+  /* and allocate space for PEAK info */
+  peaks = (PSF_CHPEAK*) malloc(props.chans * 
+      sizeof(PSF_CHPEAK));
+  if(peaks == NULL){
+    puts("No memory!\n");
+    error++;
+    goto exit;
+  }
+
+  int blocksize = 0;
+  framesread = psf_sndReadFloatFrames(ifd,frame,nframes);
+
+  /* calculating peak amplitude */
+  while (framesread &gt 0){
+    double thispeak;
+    blocksize = framesread * props.chans;
+    thispeak = maxsamp(frame, blocksize);
+    if(thispeak &gt inpeak)
+      inpeak = thispeak;
+    framesread = psf_sndReadFloatFrames(ifd,frame,nframes);
+  }
+
+  if(framesread &lt 0) {
+    printf("Error reading infile. Outfile is incomplite.\n");
+    error++;
+    goto exit;
+  }
+  /* rewinding */
+  if((psf_sndSeek(ifd, 0, PSF_SEEK_SET)) &lt 0){
+    printf("Error: unable to rewind infile.\n");
+    error++;
+    goto exit;
+  }
+
+  if(inpeak==0.0){
+    printf("infile is silent! Outfile not created.\n");
+    goto exit;
+  }
+
+  scalefac = (float)(ampfac / inpeak);
+  printf("inpeak: %lf\n", inpeak);
+  printf("scalefac: %f\n", scalefac);
+
+  ofd = psf_sndCreate(argv[ARG_OUTFILE],&props,0,1,PSF_CREATE_RDWR);
+  if(ofd &lt 0){
+    printf("Error: unable to create outfile %s\n",
+        argv[ARG_OUTFILE]);
+    error++;
+    goto exit;
+  }
+  
+  long totalread=0;
+  framesread = psf_sndReadFloatFrames(ifd,frame,nframes);
+  while (framesread &gt 0){
+    totalread+= framesread;
+    blocksize = framesread * props.chans;
+    for(int i=0;i&lt=blocksize;i++){
+      frame[i] *= scalefac;
+    }
+    psf_sndWriteFloatFrames(ofd,frame,framesread);
+    framesread = psf_sndReadFloatFrames(ifd,frame,nframes);
+    printf("framesread: %ld\n",framesread);
+  }
+  if(framesread &lt 0) {
+    printf("Error reading infile.\n");
+    error++;
+    goto exit;
+  }
+  else {
+    printf("Done. %ld sample frames copied to %s\n",totalread ,argv[ARG_OUTFILE]);
+  }
+  /* do all cleanup */
+exit:
+  if(ifd &gt= 0)
+    psf_sndClose(ifd);
+  if(ofd &gt= 0)
+    psf_sndClose(ofd);
+  if(frame)
+    free(frame);
+  if(peaks)
+    free(peaks);
+  psf_finish();
+  return error;
+}
+</code>
+</pre>
+<p> コンパイル, 使い方など
+<pre>
+<code>
+gcc -o sfnorm.bin -lportsf sfnorm.c
+./sfnorm.bin abc.wav abc-10db.wav -10
+</code>
+</pre>
+<p> これで-10dbでノーマライズされたwavファイルができる. -10dBは最大振幅から10^(-1/2)の振幅, つまり1/(ルート10), 約0.316倍されたものとなる. -20dbは10^(-1)=0.1倍となる. dBと体感音量の関係を実際に比較してみると良いだろう.
+</body>
+</html>

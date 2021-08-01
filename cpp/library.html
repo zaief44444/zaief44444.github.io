@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>パッケージマネージャーとライブラリ</title>
+<meta http-equive="content-type" charset="utf-8">
+<link rel="stylesheet" href="/css/hljs.css">
+<link rel="icon" href="/img/favicon.ico">
+</head>
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/tomorrow-night-blue.min.css">
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/highlight.min.js"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+<link rel="stylesheet" href="/css/hljs.css">
+
+<body>
+<p><a href="./">戻る</a>
+<h1>パッケージマネージャーとライブラリ</h1>
+<p> Mar 24, 2020
+<p> 標準ライブラリはincludeするだけで難なくコンパイル, リンクできるが一般のライブラリでは適切にオプションを設定しなくてはならない. 今回MacとArchという二つの環境で調べた.
+<p> ここではportaudioというサウンドライブラリを例に一つ解説する. sinwavetest.cpp というファイルに以下を書いた.
+<pre>
+<code>
+#include &ltcstdio&gt
+#include &ltcmath&gt
+#include &ltcstdlib&gt
+#include "portaudio.h"
+#define Fs 44100
+#define FRAMES_PER_BUFFER 128
+#define pi 3.14159265358979323
+using namespace std;
+
+typedef struct {
+  float freq;
+  float index;
+} padata;
+
+static int dsp(const void *inputBuffer,
+    void *outputBuffer,
+    unsigned long framesPerBuffer,
+    const PaStreamCallbackTimeInfo *timeInfo,
+    PaStreamCallbackFlags statusFlags,
+    void *userData
+    ){
+  padata *data = (padata *)userData;
+  float *out = (float *)outputBuffer;
+  long i;
+
+  for( i=0; i &lt framesPerBuffer; i++){
+    *out++ = 0.7 * sin( 2 * pi * data-&gtfreq * data-&gtindex / Fs );
+    *out++ = 0.7 * sin( 2 * pi * data-&gtfreq * data-&gtindex / Fs );
+    data-&gtindex+=1.f;
+  }
+  return 0;
+}
+int main(int argc, char *argv[]){
+  if(argc!=2)
+  {
+    exit(1);
+  }
+  int freqarg = atoi(argv[1]);
+  if (freqarg&gt= 14400){
+    printf("too high freq");
+    exit(1);
+  }
+
+  PaStreamParameters outParam;
+  PaStream *stream;
+  PaError err;
+  padata data;
+  data.freq = freqarg;
+  data.index = 0.f;
+
+  Pa_Initialize();
+  outParam.device = Pa_GetDefaultOutputDevice();
+  outParam.channelCount = 2;
+  outParam.sampleFormat = paFloat32; //32bit float
+  outParam.suggestedLatency = Pa_GetDeviceInfo( outParam.device )-&gtdefaultLowOutputLatency;
+  outParam.hostApiSpecificStreamInfo = NULL;
+
+  Pa_OpenStream(
+      &stream,
+      NULL,
+      &outParam,
+      Fs,
+      FRAMES_PER_BUFFER,
+      paClipOff,
+      dsp,
+      &data
+      );
+  Pa_StartStream(stream);
+  getchar();
+  Pa_StopStream(stream);
+  Pa_Terminate();
+  return 0;
+}
+</code>
+</pre>
+
+<h2>Macの場合</h2>
+<p> MacとArchでライブラリのインストール, ライブラリのインクルード, リンクがどのようになるのかをまず確かめる. brew install portaudioとするとどこにインストールされるのかを見てみよう. pkgconfigはよくわからないので今後解説したい.
+<pre>
+<code>
+/usr/local/include/portaudiocpp
+/usr/local/include/portaudio.h
+/usr/local/Homebrew/Library/Taps/homebrew/homebrew-core/Formula/portaudio.rb
+/usr/local/var/homebrew/linked/portaudio
+/usr/local/lib/pkgconfig/portaudiocpp.pc
+/usr/local/lib/pkgconfig/portaudio-2.0.pc
+/usr/local/lib/libportaudiocpp.dylib
+/usr/local/lib/libportaudiocpp.0.dylib
+/usr/local/lib/libportaudio.2.dylib
+/usr/local/lib/libportaudio.a
+/usr/local/lib/libportaudio.dylib
+/usr/local/lib/libportaudiocpp.a
+/usr/local/opt/portaudio
+/usr/local/Cellar/portaudio
+/usr/local/Cellar/portaudio/19.6.0
+/usr/local/Cellar/portaudio/19.6.0/INSTALL_RECEIPT.json
+/usr/local/Cellar/portaudio/19.6.0/.brew
+/usr/local/Cellar/portaudio/19.6.0/.brew/portaudio.rb
+/usr/local/Cellar/portaudio/19.6.0/include
+/usr/local/Cellar/portaudio/19.6.0/include/portaudiocpp
+/usr/local/Cellar/portaudio/19.6.0/include/portaudiocpp/Exception.hxx
+/usr/local/Cellar/portaudio/19.6.0/include/portaudiocpp/HostApi.hxx
+/usr/local/Cellar/portaudio/19.6.0/include/portaudiocpp/DirectionSpecificStreamParameters.hxx
+/usr/local/Cellar/portaudio/19.6.0/include/portaudiocpp/SystemDeviceIterator.hxx
+/usr/local/Cellar/portaudio/19.6.0/include/portaudiocpp/PortAudioCpp.hxx
+/usr/local/Cellar/portaudio/19.6.0/include/portaudiocpp/InterfaceCallbackStream.hxx
+/usr/local/Cellar/portaudio/19.6.0/include/portaudiocpp/CFunCallbackStream.hxx
+/usr/local/Cellar/portaudio/19.6.0/include/portaudiocpp/StreamParameters.hxx
+/usr/local/Cellar/portaudio/19.6.0/include/portaudiocpp/BlockingStream.hxx
+/usr/local/Cellar/portaudio/19.6.0/include/portaudiocpp/Device.hxx
+/usr/local/Cellar/portaudio/19.6.0/include/portaudiocpp/CallbackStream.hxx
+/usr/local/Cellar/portaudio/19.6.0/include/portaudiocpp/MemFunCallbackStream.hxx
+/usr/local/Cellar/portaudio/19.6.0/include/portaudiocpp/AutoSystem.hxx
+/usr/local/Cellar/portaudio/19.6.0/include/portaudiocpp/SampleDataFormat.hxx
+/usr/local/Cellar/portaudio/19.6.0/include/portaudiocpp/System.hxx
+/usr/local/Cellar/portaudio/19.6.0/include/portaudiocpp/Stream.hxx
+/usr/local/Cellar/portaudio/19.6.0/include/portaudiocpp/SystemHostApiIterator.hxx
+/usr/local/Cellar/portaudio/19.6.0/include/portaudiocpp/CppFunCallbackStream.hxx
+/usr/local/Cellar/portaudio/19.6.0/include/portaudiocpp/CallbackInterface.hxx
+/usr/local/Cellar/portaudio/19.6.0/include/portaudio.h
+/usr/local/Cellar/portaudio/19.6.0/include/pa_mac_core.h
+/usr/local/Cellar/portaudio/19.6.0/lib
+/usr/local/Cellar/portaudio/19.6.0/lib/pkgconfig
+/usr/local/Cellar/portaudio/19.6.0/lib/pkgconfig/portaudiocpp.pc
+/usr/local/Cellar/portaudio/19.6.0/lib/pkgconfig/portaudio-2.0.pc
+/usr/local/Cellar/portaudio/19.6.0/lib/libportaudiocpp.dylib
+/usr/local/Cellar/portaudio/19.6.0/lib/libportaudiocpp.0.dylib
+/usr/local/Cellar/portaudio/19.6.0/lib/libportaudio.2.dylib
+/usr/local/Cellar/portaudio/19.6.0/lib/libportaudio.a
+/usr/local/Cellar/portaudio/19.6.0/lib/libportaudio.dylib
+/usr/local/Cellar/portaudio/19.6.0/lib/libportaudiocpp.a
+/usr/local/Cellar/portaudio/19.6.0/README.txt
+/usr/local/Cellar/portaudio/19.6.0/LICENSE.txt
+</code>
+</pre>
+
+<p> brew ではシンボリックリンクを利用してパッケージを管理している, いくつか見てみる.
+<pre>
+<code>
+$ ls -l /usr/local/include/portaudio.h 
+lrwxr-xr-x  1 zaief  admin  46  3 27  2019 /usr/local/include/portaudio.h -&gt ../Cellar/portaudio/19.6.0/include/portaudio.h
+</code>
+</pre>
+
+<p> 以下同様に調べることで次の結果を得た. brewを使っているとシステムが既に使ってしまい被ってしまうkeg-onlyなパッケージは/usr/local/bin, /usr/local/include, /usr/local/lib などへはシンボリックリンクが張られない. portaudioはkeg-onlyではないので通常通りリンクが張られているが, ここで気になるのは/usr/local/opt/portaudio の存在意義だ. keg-onlyならばここを代わりにパスとして使うという用途なのはわかるが, keg-onlyでないにも関わらずここにもリンクを張る必要があるのか. その疑問は <a href="https://stackoverflow.com/questions/35337601/why-is-there-a-usr-local-opt-directory-created-by-homebrew-and-should-i-use-it">https://stackoverflow.com/questions/35337601/why-is-there-a-usr-local-opt-directory-created-by-homebrew-and-should-i-use-it</a> が解決する, と思いきや質問に答えていないのがベストアンサーだったというオチ. 
+<pre>
+<code>
+lrwxr-xr-x  1 zaief  admin  47  3 27  2019 /usr/local/include/portaudiocpp -&gt ../Cellar/portaudio/19.6.0/include/portaudiocpp
+lrwxr-xr-x  1 zaief  admin  51  3 27  2019 /usr/local/lib/libportaudio.2.dylib -&gt ../Cellar/portaudio/19.6.0/lib/libportaudio.2.dylib
+lrwxr-xr-x  1 zaief  admin  45  3 27  2019 /usr/local/lib/libportaudio.a -&gt ../Cellar/portaudio/19.6.0/lib/libportaudio.a
+lrwxr-xr-x  1 zaief  admin  49  3 27  2019 /usr/local/lib/libportaudio.dylib -&gt ../Cellar/portaudio/19.6.0/lib/libportaudio.dylib
+lrwxr-xr-x  1 zaief  admin  26  3 27  2019 /usr/local/opt/portaudio -&gt ../Cellar/portaudio/19.6.0
+lrwxr-xr-x  1 zaief  admin  52  3 27  2019 /usr/local/lib/libportaudiocpp.dylib -&gt ../Cellar/portaudio/19.6.0/lib/libportaudiocpp.dylib
+lrwxr-xr-x  1 zaief  admin  54  3 27  2019 /usr/local/lib/libportaudiocpp.0.dylib -&gt ../Cellar/portaudio/19.6.0/lib/libportaudiocpp.0.dylib
+lrwxr-xr-x  1 zaief  admin  48  3 27  2019 /usr/local/lib/libportaudiocpp.a -&gt ../Cellar/portaudio/19.6.0/lib/libportaudiocpp.a
+lrwxr-xr-x  1 zaief  admin  26  3 27  2019 /usr/local/opt/portaudio -&gt ../Cellar/portaudio/19.6.0
+</code>
+</pre>
+
+<p> さらに/usr/local/Cellar 以下は次のようになった. このように無印バージョンはシンボリックリンクでさらに最新バージョンを指している. この場合, 動的ライブラリlibportaudio.2.dylibと静的ライブラリlibportaudio.aのみ実態を持つことがわかる. ちなみにlibportaudiocppはlibportaudioはc向けに書かれたライブラリなのでオブジェクト指向のC++向けにラッピングしたものだ. 静的ライブラリはバージョン自体がない. バージョンをいくつも用意するメリットが動的に比べてないのだろう. それとarchのpacmanの場合と比べるとメジャーバージョンしか書かれていない. マイナーバージョンの情報はbrew側がどこかで管理しているのだろう.
+<pre>
+<code>
+$ ls -l /usr/local/Cellar/portaudio/19.6.0/lib/libportaudio*
+-rw-r--r--  1 zaief  staff   88012  3 27  2019 /usr/local/Cellar/portaudio/19.6.0/lib/libportaudio.2.dylib
+-r--r--r--  1 zaief  staff  123368 10 30  2016 /usr/local/Cellar/portaudio/19.6.0/lib/libportaudio.a
+lrwxr-xr-x  1 zaief  staff      20 10 30  2016 /usr/local/Cellar/portaudio/19.6.0/lib/libportaudio.dylib -&gt libportaudio.2.dylib
+-r--r--r--  1 zaief  staff   56244  3 27  2019 /usr/local/Cellar/portaudio/19.6.0/lib/libportaudiocpp.0.dylib
+-r--r--r--  1 zaief  staff   87472 10 30  2016 /usr/local/Cellar/portaudio/19.6.0/lib/libportaudiocpp.a
+lrwxr-xr-x  1 zaief  staff      23 10 30  2016 /usr/local/Cellar/portaudio/19.6.0/lib/libportaudiocpp.dylib -&gt libportaudiocpp.0.dylib
+</code>
+</pre>
+
+<p>g++のオプションに-vを付け足すだけでインクルードやリンクの情報が表示される. gccではデフォルトで静的でなく動的ライブラリをリンクするようになっていることが次からわかる. オプションが大量に付加されていることがわかる. それとMacではg++としてもclangが呼び出される. オプションが気になる人は, <a href="https://gcc.gnu.org/onlinedocs/gcc/Invoking-GCC.html#Invoking-GCC">https://gcc.gnu.org/onlinedocs/gcc/Invoking-GCC.html#Invoking-GCC</a> が参考になる.
+
+<pre>
+<code>
+$ g++ -v sinwavetest.cpp -o sinwavetest_dylib -lportaudio
+Apple LLVM version 10.0.0 (clang-1000.10.44.4)
+Target: x86_64-apple-darwin17.7.0
+Thread model: posix
+InstalledDir: /Library/Developer/CommandLineTools/usr/bin
+ "/Library/Developer/CommandLineTools/usr/bin/clang" -cc1 -triple x86_64-apple-macosx10.13.0 -Wdeprecated-objc-isa-usage 
+ -Werror=deprecated-objc-isa-usage -emit-obj -mrelax-all -disable-free -disable-llvm-verifier -discard-value-names 
+ -main-file-name sinwavtest.cpp -mrelocation-model pic -pic-level 2 -mthread-model posix -mdisable-fp-elim -fno-strict-return 
+ -masm-verbose -munwind-tables -target-cpu penryn -dwarf-column-info -debugger-tuning=lldb -target-linker-version 409.12 -v 
+ -resource-dir /Library/Developer/CommandLineTools/usr/lib/clang/10.0.0 -stdlib=libc++ -fdeprecated-macro -fdebug-compilation-dir 
+ /Users/zaief/cpp/portaudio/sinwave -ferror-limit 19 -fmessage-length 136 -stack-protector 1 -fblocks 
+ -fencode-extended-block-signature -fobjc-runtime=macosx-10.13.0 -fcxx-exceptions -fexceptions -fmax-type-align=16 
+ -fdiagnostics-show-option -fcolor-diagnostics -o /var/folders/jr/8sh2gy9s0y701rtvl8cyrm6w0000gn/T/sinwavtest-489410.o -x c++ sinwavtest.cpp
+clang -cc1 version 10.0.0 (clang-1000.10.44.4) default target x86_64-apple-darwin17.7.0
+ignoring nonexistent directory "/usr/include/c++/v1"
+#include "..." search starts here:
+#include &lt...&gt search starts here:
+ /Library/Developer/CommandLineTools/usr/include/c++/v1
+ /usr/local/include
+ /Library/Developer/CommandLineTools/usr/lib/clang/10.0.0/include
+ /Library/Developer/CommandLineTools/usr/include
+ /usr/include
+ /System/Library/Frameworks (framework directory)
+ /Library/Frameworks (framework directory)
+End of search list.
+ "/Library/Developer/CommandLineTools/usr/bin/ld" -demangle -lto_library /Library/Developer/CommandLineTools/usr/lib/libLTO.dylib 
+-no_deduplicate -dynamic -arch x86_64 -macosx_version_min 10.13.0 -o sinwavtest_dylib 
+/var/folders/jr/8sh2gy9s0y701rtvl8cyrm6w0000gn/T/sinwavtest-489410.o -lportaudio -lc++ -lSystem 
+/Library/Developer/CommandLineTools/usr/lib/clang/10.0.0/lib/darwin/libclang_rt.osx.a
+</code>
+</pre>
+<p> インクルードパスについて, いくつか見てみる. このインクルードパスの順番が重要で優先度を表す.
+<ul>
+  <li> /Library/Developer/CommandLineTools/usr/include/c++/v1/ は標準ヘッダーがある.</li>
+  <li> /user/local/include はbrewなどでインストールしたライブラリのヘッダーがある.
+  <li> /Library/Developer/CommandLineTools/usr/lib/clang/10.0.0/include はシステム関係のヘッダーがある. </li>
+  <li> /Library/Developer/CommandLineTools/usr/include にはほぼ何もなし. </li>
+  <li> /usr/includeは実はCatalinaからなくなっている. 私の環境のHigh Sierraでは雑多で標準ライブラリやそうでないものが混ざっておりでよくわからず. </li>
+  <li> frameworkディレクトリはよくわからない. </li>
+</ul>
+
+<p> ライブラリパスはどのようにサーチをしているのかがわからない. 後で解説しているarchではライブラリパスも表示されるが, なぜだろうか. 次で調べることができる.
+<pre>
+<code>
+$ clang -Xlinker -v
+@(#)PROGRAM:ld  PROJECT:ld64-409.12
+BUILD 17:47:51 Sep 25 2018
+configured to support archs: armv6 armv7 armv7s arm64 i386 x86_64 x86_64h armv6m armv7k armv7m armv7em
+Library search paths:
+  /usr/lib
+  /usr/local/lib
+Framework search paths:
+  /Library/Frameworks/
+  /System/Library/Frameworks/
+Undefined symbols for architecture x86_64:
+  _main", referenced from:
+    implicit entry/start for main executable
+ld: symbol(s) not found for architecture x86_64
+clang: error: linker command failed with exit code 1 (use -v to see invocation)
+</code>
+</pre>
+
+<a href="https://decafish.blog.ss-blog.jp/2019-07-20">https://decafish.blog.ss-blog.jp/2019-07-20</a> みたいな面倒臭い例もある.
+
+<p> さて, 実行ファイルからリンクを調べるにはMacではOtool -Lを使う. portaudioは無印ではなくバージョン2を指すものを使っている. 無印バージョンは最新バージョンを指すためこれを使うと非互換なアップデート後に実行時に動的ロードができなくなってしまう. だからバージョン付きのものを使う必要がある. なんと, /usr/local/opt内の動的ライブラリを使っている. 実体は同じものだが, ライブラリサーチパスに入っていない方を選んでいる.
+<pre>
+<code>
+$ Otool -L sinwavtest_dylib
+sinwavtest_dylib:
+	/usr/local/opt/portaudio/lib/libportaudio.2.dylib (compatibility version 3.0.0, current version 3.0.0)
+	/usr/lib/libc++.1.dylib (compatibility version 1.0.0, current version 400.9.0)
+	/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1252.50.4)
+</code>
+</pre>
+
+<p>  今度は静的リンクでビルドしてみる. -static オプションをつけることで静的ライブラリをリンクすることができる.
+<pre>
+<code>
+Apple LLVM version 10.0.0 (clang-1000.10.44.4)
+Target: x86_64-apple-darwin17.7.0
+Thread model: posix
+InstalledDir: /Library/Developer/CommandLineTools/usr/bin
+ "/Library/Developer/CommandLineTools/usr/bin/clang" -cc1 -triple x86_64-apple-macosx10.13.0 -Wdeprecated-objc-isa-usage -Werror=deprecated-objc-isa-usage -emit-obj -mrelax-all -disable-free -disable-llvm-verifier -discard-value-names -main-file-name sinwavtest.cpp -static-define 
+ -mrelocation-model static -mthread-model posix -mdisable-fp-elim -fno-strict-return -masm-verbose -munwind-tables -target-cpu penryn -dwarf-column-info -debugger-tuning=lldb -target-linker-version 409.12 -v -resource-dir /Library/Developer/CommandLineTools/usr/lib/clang/10.0.0 -stdlib=libc++ -fdeprecated-macro -fdebug-compilation-dir /Users/zaief/cpp/portaudio/sinwave -ferror-limit 19 -fmessage-length 136 -stack-protector 1 -fblocks -fencode-extended-block-signature -fobjc-runtime=macosx-10.13.0 -fcxx-exceptions -fexceptions -fmax-type-align=16 -fdiagnostics-show-option fcolor-diagnostics -o /var/folders/jr/8sh2gy9s0y701rtvl8cyrm6w0000gn/T/sinwavtest-7f64c2.o -x c++ sinwavtest.cpp
+clang -cc1 version 10.0.0 (clang-1000.10.44.4) default target x86_64-apple-darwin17.7.0
+ignoring nonexistent directory "/usr/include/c++/v1"
+#include "..." search starts here:
+#include &lt...&gt search starts here:
+ /Library/Developer/CommandLineTools/usr/include/c++/v1
+ /usr/local/include
+ /Library/Developer/CommandLineTools/usr/lib/clang/10.0.0/include
+ /Library/Developer/CommandLineTools/usr/include
+ /usr/include
+ /System/Library/Frameworks (framework directory)
+ /Library/Frameworks (framework directory)
+End of search list.
+ "/Library/Developer/CommandLineTools/usr/bin/ld" -demangle -lto_library /Library/Developer/CommandLineTools/usr/lib/libLTO.dylib -no_deduplicate -static -arch x86_64 -macosx_version_min 10.13.0 -o sinwavtest_static -lcrt0.o /var/folders/jr/8sh2gy9s0y701rtvl8cyrm6w0000gn/T/sinwavtest-7f64c2.o -lportaudio -lc++
+ld: library not found for -lcrt0.o
+clang: error: linker command failed with exit code 1 (use -v to see invocation)-
+</code>
+</pre>
+<p> -lcrt0.o がなくリンクできない. portaudio自体は静的ライブラリを持っているが, <a href="https://stackoverflow.com/questions/3801011/ld-library-not-found-for-lcrt0-o-on-osx-10-6-with-gcc-clang-static-flag/3801032">https://stackoverflow.com/questions/3801011/ld-library-not-found-for-lcrt0-o-on-osx-10-6-with-gcc-clang-static-flag/3801032</a> によると-staticオプションはMacでは使えないという.
+
+<h1>archの場合</h1>
+<p> pacman -S portaudio とすると以下のようにportaudio関係のファイルがインストールされる.
+<pre>
+<code>
+/usr/share/licenses/portaudio
+/usr/share/licenses/portaudio/LICENSE.txt
+/usr/share/doc/portaudio
+/usr/share/doc/portaudio/README.txt
+/usr/lib/libportaudio.so.2
+/usr/lib/libportaudiocpp.so
+/usr/lib/libportaudiocpp.so.0.0.12
+/usr/lib/libportaudiocpp.so.0
+/usr/lib/libportaudio.so.2.0.0
+/usr/lib/libportaudio.so
+/usr/lib/pkgconfig/portaudiocpp.pc
+/usr/lib/pkgconfig/portaudio-2.0.pc
+/usr/include/portaudio.h
+/usr/include/portaudiocpp
+/usr/include/portaudiocpp/DirectionSpecificStreamParameters.hxx
+/usr/include/portaudiocpp/CallbackStream.hxx
+/usr/include/portaudiocpp/SystemDeviceIterator.hxx
+/usr/include/portaudiocpp/MemFunCallbackStream.hxx
+/usr/include/portaudiocpp/SystemHostApiIterator.hxx
+/usr/include/portaudiocpp/System.hxx
+/usr/include/portaudiocpp/Stream.hxx
+/usr/include/portaudiocpp/Device.hxx
+/usr/include/portaudiocpp/AutoSystem.hxx
+/usr/include/portaudiocpp/InterfaceCallbackStream.hxx
+/usr/include/portaudiocpp/StreamParameters.hxx
+/usr/include/portaudiocpp/PortAudioCpp.hxx
+/usr/include/portaudiocpp/CallbackInterface.hxx
+/usr/include/portaudiocpp/SampleDataFormat.hxx
+/usr/include/portaudiocpp/BlockingStream.hxx
+/usr/include/portaudiocpp/CppFunCallbackStream.hxx
+/usr/include/portaudiocpp/Exception.hxx
+/usr/include/portaudiocpp/HostApi.hxx
+/usr/include/portaudiocpp/CFunCallbackStream.hxx
+/var/cache/pacman/pkg/portaudio-1:19.6.0-6-x86_64.pkg.tar.xz
+/var/lib/pacman/local/portaudio-1:19.6.0-6
+/var/lib/pacman/local/portaudio-1:19.6.0-6/mtree
+/var/lib/pacman/local/portaudio-1:19.6.0-6/files
+/var/lib/pacman/local/portaudio-1:19.6.0-6/desc
+</code>
+</pre>
+
+<p> archはbrewと違い/usr/local/includeや/usr/local/libではなく/usr/local/に直接入れる. brewはsystemと被るものがあった時に困るがpacmanは一貫性のあるシステムが構築される. その代わりシステムに影響を及ぼすリスクもある. バージョンのない無印のものは最新バージョンへのシンボリックリンク, バージョン0は0.0.12へのシンボリックリンクとなっている. この最初の0がメジャーバージョンで同じメジャーバージョンでは前方互換性を保たなくてはならない. さて, brewとは違い静的ライブラリの.a拡張子のものがなく動的ライブラリ.soのみだ. ここの一説としてarchではパッケージの配布は何にも依存せず単体で動くものは無駄が多くポリシーに反するのだろう. そのほかにも依存パッケージアップデートをしても静的ならばアップデートされなかったりとこれまたポリシーに反する.
+<pre>
+<code>
+ls -l /usr/lib/libportaudio*                                                                      [0]
+lrwxrwxrwx 1 root root     25 Aug  9  2019 /usr/lib/libportaudiocpp.so -&gt libportaudiocpp.so.0.0.12
+lrwxrwxrwx 1 root root     25 Aug  9  2019 /usr/lib/libportaudiocpp.so.0 -&gt libportaudiocpp.so.0.0.12
+-rwxr-xr-x 1 root root  63256 Aug  9  2019 /usr/lib/libportaudiocpp.so.0.0.12
+lrwxrwxrwx 1 root root     21 Aug  9  2019 /usr/lib/libportaudio.so -&gt libportaudio.so.2.0.0
+lrwxrwxrwx 1 root root     21 Aug  9  2019 /usr/lib/libportaudio.so.2 -&gt libportaudio.so.2.0.0
+</code>
+</pre>
+
+<p> archも同様に-vオプションでインクルード, リンクの情報を得られる.
+<pre>
+<code>
+$ g++ -v sinwavtest.cpp -o sinwavtest_dylib -lportaudio
+Using built-in specs.
+COLLECT_GCC=g++
+COLLECT_LTO_WRAPPER=/usr/lib/gcc/x86_64-pc-linux-gnu/9.2.1/lto-wrapper
+Target: x86_64-pc-linux-gnu
+Configured with: /build/gcc/src/gcc/configure --prefix=/usr --libdir=/usr/lib --libexecdir=/usr/lib --mandir=/usr/share/man --infodir=/usr/share/info --with-pkgversion='Arch Linux 9.2.1+20200130-2' --with-bugurl=https://bugs.archlinux.org/ --enable-languages=c,c++,ada,fortran,go,lto,objc,obj-c++,d --enable-shared --enable-threads=posix --with-system-zlib --with-isl --enable-__cxa_atexit --disable-libunwind-exceptions --enable-clocale=gnu --disable-libstdcxx-pch --disable-libssp --enable-gnu-unique-object --enable-linker-build-id --enable-lto --enable-plugin --enable-install-libiberty --with-linker-hash-style=gnu --enable-gnu-indirect-function --enable-multilib --disable-werror --enable-checking=release --enable-default-pie --enable-default-ssp --enable-cet=auto gdc_include_dir=/usr/include/dlang/gdc
+Thread model: posix
+gcc version 9.2.1 20200130 (Arch Linux 9.2.1+20200130-2)
+COLLECT_GCC_OPTIONS='-v' '-shared-libgcc' '-mtune=generic' '-march=x86-64'
+ /usr/lib/gcc/x86_64-pc-linux-gnu/9.2.1/cc1plus -quiet -v -D_GNU_SOURCE sinwavetest.cpp -quiet -dumpbase sinwavetest.cpp -mtune=generic -march=x86-64 -auxbase sinwavetest -version -o /tmp/cceCS0DU.s
+GNU C++14 (Arch Linux 9.2.1+20200130-2) version 9.2.1 20200130 (x86_64-pc-linux-gnu)
+	compiled by GNU C version 9.2.1 20200130, GMP version 6.2.0, MPFR version 4.0.2, MPC version 1.1.0, isl version isl-0.21-GMP
+
+GGC heuristics: --param ggc-min-expand=62 --param ggc-min-heapsize=61426
+ignoring nonexistent directory "/usr/lib/gcc/x86_64-pc-linux-gnu/9.2.1/../../../../x86_64-pc-linux-gnu/include"
+#include "..." search starts here:
+#include &lt...&gt search starts here:
+ /usr/lib/gcc/x86_64-pc-linux-gnu/9.2.1/../../../../include/c++/9.2.1
+ /usr/lib/gcc/x86_64-pc-linux-gnu/9.2.1/../../../../include/c++/9.2.1/x86_64-pc-linux-gnu
+ /usr/lib/gcc/x86_64-pc-linux-gnu/9.2.1/../../../../include/c++/9.2.1/backward
+ /usr/lib/gcc/x86_64-pc-linux-gnu/9.2.1/include
+ /usr/local/include
+ /usr/lib/gcc/x86_64-pc-linux-gnu/9.2.1/include-fixed
+ /usr/include
+End of search list.
+GNU C++14 (Arch Linux 9.2.1+20200130-2) version 9.2.1 20200130 (x86_64-pc-linux-gnu)
+	compiled by GNU C version 9.2.1 20200130, GMP version 6.2.0, MPFR version 4.0.2, MPC version 1.1.0, isl version isl-0.21-GMP
+
+GGC heuristics: --param ggc-min-expand=62 --param ggc-min-heapsize=61426
+Compiler executable checksum: 0f98914bc20ceba8208e51da5fb8e41a
+COLLECT_GCC_OPTIONS='-v' '-shared-libgcc' '-mtune=generic' '-march=x86-64'
+ as -v --64 -o /tmp/ccogDiXV.o /tmp/cceCS0DU.s
+GNU assembler version 2.34 (x86_64-pc-linux-gnu) using BFD version (GNU Binutils) 2.34
+COMPILER_PATH=/usr/lib/gcc/x86_64-pc-linux-gnu/9.2.1/:/usr/lib/gcc/x86_64-pc-linux-gnu/9.2.1/:/usr/lib/gcc/x86_64-pc-linux-gnu/:/usr/lib/gcc/x86_64-pc-linux-gnu/9.2.1/:/usr/lib/gcc/x86_64-pc-linux-gnu/
+LIBRARY_PATH=/usr/lib/gcc/x86_64-pc-linux-gnu/9.2.1/:/usr/lib/gcc/x86_64-pc-linux-gnu/9.2.1/../../../../lib/:/lib/../lib/:/usr/lib/../lib/:/usr/lib/gcc/x86_64-pc-linux-gnu/9.2.1/../../../:/lib/:/usr/lib/
+COLLECT_GCC_OPTIONS='-v' '-shared-libgcc' '-mtune=generic' '-march=x86-64'
+ /usr/lib/gcc/x86_64-pc-linux-gnu/9.2.1/collect2 -plugin /usr/lib/gcc/x86_64-pc-linux-gnu/9.2.1/liblto_plugin.so -plugin-opt=/usr/lib/gcc/x86_64-pc-linux-gnu/9.2.1/lto-wrapper -plugin-opt=-fresolution=/tmp/cccDSdcV.res -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc --build-id --eh-frame-hdr --hash-style=gnu -m elf_x86_64 -dynamic-linker /lib64/ld-linux-x86-64.so.2 -pie /usr/lib/gcc/x86_64-pc-linux-gnu/9.2.1/../../../../lib/Scrt1.o /usr/lib/gcc/x86_64-pc-linux-gnu/9.2.1/../../../../lib/crti.o /usr/lib/gcc/x86_64-pc-linux-gnu/9.2.1/crtbeginS.o -L/usr/lib/gcc/x86_64-pc-linux-gnu/9.2.1 -L/usr/lib/gcc/x86_64-pc-linux-gnu/9.2.1/../../../../lib -L/lib/../lib -L/usr/lib/../lib -L/usr/lib/gcc/x86_64-pc-linux-gnu/9.2.1/../../.. /tmp/ccogDiXV.o -lportaudio -lstdc++ -lm -lgcc_s -lgcc -lc -lgcc_s -lgcc /usr/lib/gcc/x86_64-pc-linux-gnu/9.2.1/crtendS.o /usr/lib/gcc/x86_64-pc-linux-gnu/9.2.1/../../../../lib/crtn.o
+COLLECT_GCC_OPTIONS='-v' '-shared-libgcc' '-mtune=generic' '-march=x86-64'
+</code>
+</pre>
+
+<p> まずインクルードパスについて見てみる.
+<ul>
+<li> /usr/lib/gcc/x86_64-pc-linux-gnu/9.2.1/../../../../include/c++/9.2.1</li>
+<li> /usr/lib/gcc/x86_64-pc-linux-gnu/9.2.1/../../../../include/c++/9.2.1/x86_64-pc-linux-gnu</li>
+<li> /usr/lib/gcc/x86_64-pc-linux-gnu/9.2.1/../../../../include/c++/9.2.1/backward</li>
+<li> /usr/lib/gcc/x86_64-pc-linux-gnu/9.2.1/include</li>
+<li> /usr/local/include</li>
+<li> /usr/lib/gcc/x86_64-pc-linux-gnu/9.2.1/include-fixed</li>
+<li> /usr/include</li>
+</ul>
+
+<p> ライブラリパスも表示されているので見てみる.
+<ul>
+<li>-L/usr/lib/gcc/x86_64-pc-linux-gnu/9.2.1 </li>
+<li>-L/usr/lib/gcc/x86_64-pc-linux-gnu/9.2.1/../../../../lib </li>
+<li>-L/lib/../lib </li>
+<li>-L/usr/lib/../lib </li>
+<li>-L/usr/lib/gcc/x86_64-pc-linux-gnu/9.2.1/../../..</li>
+</ul>
+
+<h2>参考</h2>
+<a href="https://sleepy-yoshi.hatenablog.com/entry/20090510/p1">https://sleepy-yoshi.hatenablog.com/entry/20090510/p1</a> 共有ライブラリについて
+</body>
+</html>

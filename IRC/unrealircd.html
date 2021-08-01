@@ -1,0 +1,1124 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>UnrealIRCd解説</title>
+<meta http-equive="content-type" charset="utf-8">
+<link rel="icon" href="/img/favicon.ico">
+<link rel="stylesheet" href="/css/simple.css">
+</head>
+<body>
+<p><a href="../">戻る</a>
+<h1>UnrealIRCd解説</h1>
+<p> July 11, 2020
+<p> 今の時代にIRCサーバーを立てたとしても, 少なくともネット上では活用できないだろう. 今はSNSの時代でありそれで多くの人は事足りる. チャットはDiscordが盛んでIRCよりも格段に便利なのでそこへ移転するコミュニティも多かった. つまり自己満足でやることであり, ユーザーが来ることは期待するものではない. 今回もArchの環境でやっている. 
+<p> pacman -S unrealircd とすると, unrealircd関係のファイルが以下のように入る. 
+<pre>
+<code>
+/etc/unrealircd
+/etc/unrealircd/examples
+/etc/unrealircd/examples/example.conf
+/etc/unrealircd/examples/example.tr.conf
+/etc/unrealircd/examples/example.fr.conf
+/etc/unrealircd/operclass.default.conf
+/etc/unrealircd/unrealircd
+/etc/unrealircd/help
+/etc/unrealircd/help/help.tr.conf
+/etc/unrealircd/help/help.de.conf
+/etc/unrealircd/help/help.fr.conf
+/etc/unrealircd/help/help.it.conf
+/etc/unrealircd/help/help.conf
+/etc/unrealircd/help/help.ru.conf
+/etc/unrealircd/dccallow.conf
+/etc/unrealircd/aliases
+/etc/unrealircd/aliases/epona.conf
+/etc/unrealircd/aliases/ircservices.conf
+/etc/unrealircd/aliases/auspice.conf
+/etc/unrealircd/aliases/generic.conf
+/etc/unrealircd/aliases/atheme.conf
+/etc/unrealircd/aliases/operstats.conf
+/etc/unrealircd/aliases/aliases.conf
+/etc/unrealircd/aliases/cygnus.conf
+/etc/unrealircd/aliases/anope.conf
+/etc/unrealircd/aliases/genericstats.conf
+/etc/unrealircd/modules.sources.list
+/etc/unrealircd/badwords.conf
+/etc/unrealircd/tls
+/etc/unrealircd/tls/curl-ca-bundle.crt
+/etc/unrealircd/unrealircd.conf
+/etc/unrealircd/modules.default.conf
+/etc/unrealircd/modules.optional.conf
+/etc/unrealircd/spamfilter.conf
+/run/unrealircd
+/usr/share/doc/unrealircd
+/usr/share/doc/unrealircd/coding-guidelines
+/usr/share/doc/unrealircd/Authors
+/usr/share/doc/unrealircd/tao.of.irc
+/usr/lib/sysusers.d/unrealircd.conf
+/usr/lib/unrealircd
+/usr/lib/unrealircd/certfp.so
+/usr/lib/unrealircd/jointhrottle.so
+/usr/lib/unrealircd/restrict-commands.so
+/usr/lib/unrealircd/away.so
+/usr/lib/unrealircd/topic.so
+/usr/lib/unrealircd/svsmode.so
+/usr/lib/unrealircd/batch.so
+/usr/lib/unrealircd/sajoin.so
+/usr/lib/unrealircd/blacklist.so
+/usr/lib/unrealircd/names.so
+/usr/lib/unrealircd/stats.so
+/usr/lib/unrealircd/link-security.so
+/usr/lib/unrealircd/sjoin.so
+/usr/lib/unrealircd/time.so
+/usr/lib/unrealircd/quit.so
+/usr/lib/unrealircd/dccallow.so
+/usr/lib/unrealircd/svsnline.so
+/usr/lib/unrealircd/sendsno.so
+/usr/lib/unrealircd/user.so
+/usr/lib/unrealircd/admin.so
+/usr/lib/unrealircd/connthrottle.so
+/usr/lib/unrealircd/echo-message.so
+/usr/lib/unrealircd/lusers.so
+/usr/lib/unrealircd/svsmotd.so
+/usr/lib/unrealircd/webredir.so
+/usr/lib/unrealircd/starttls.so
+/usr/lib/unrealircd/list.so
+/usr/lib/unrealircd/message.so
+/usr/lib/unrealircd/tsctl.so
+/usr/lib/unrealircd/tkldb.so
+/usr/lib/unrealircd/history.so
+/usr/lib/unrealircd/snomasks
+/usr/lib/unrealircd/snomasks/dccreject.so
+/usr/lib/unrealircd/history_backend_null.so
+/usr/lib/unrealircd/staff.so
+/usr/lib/unrealircd/chgident.so
+/usr/lib/unrealircd/plaintext-policy.so
+/usr/lib/unrealircd/userip-tag.so
+/usr/lib/unrealircd/cap.so
+/usr/lib/unrealircd/account-notify.so
+/usr/lib/unrealircd/mode.so
+/usr/lib/unrealircd/websocket.so
+/usr/lib/unrealircd/part.so
+/usr/lib/unrealircd/third
+/usr/lib/unrealircd/chanmodes
+/usr/lib/unrealircd/chanmodes/floodprot.so
+/usr/lib/unrealircd/chanmodes/operonly.so
+/usr/lib/unrealircd/chanmodes/issecure.so
+/usr/lib/unrealircd/chanmodes/censor.so
+/usr/lib/unrealircd/chanmodes/nokick.so
+/usr/lib/unrealircd/chanmodes/noknock.so
+/usr/lib/unrealircd/chanmodes/history.so
+/usr/lib/unrealircd/chanmodes/nocolor.so
+/usr/lib/unrealircd/chanmodes/regonly.so
+/usr/lib/unrealircd/chanmodes/link.so
+/usr/lib/unrealircd/chanmodes/delayjoin.so
+/usr/lib/unrealircd/chanmodes/stripcolor.so
+/usr/lib/unrealircd/chanmodes/secureonly.so
+/usr/lib/unrealircd/chanmodes/noctcp.so
+/usr/lib/unrealircd/chanmodes/regonlyspeak.so
+/usr/lib/unrealircd/chanmodes/noinvite.so
+/usr/lib/unrealircd/chanmodes/nonickchange.so
+/usr/lib/unrealircd/chanmodes/permanent.so
+/usr/lib/unrealircd/chanmodes/nonotice.so
+/usr/lib/unrealircd/eos.so
+/usr/lib/unrealircd/usermodes
+/usr/lib/unrealircd/usermodes/privacy.so
+/usr/lib/unrealircd/usermodes/censor.so
+/usr/lib/unrealircd/usermodes/secureonlymsg.so
+/usr/lib/unrealircd/usermodes/nokick.so
+/usr/lib/unrealircd/usermodes/privdeaf.so
+/usr/lib/unrealircd/usermodes/bot.so
+/usr/lib/unrealircd/usermodes/showwhois.so
+/usr/lib/unrealircd/usermodes/servicebot.so
+/usr/lib/unrealircd/usermodes/noctcp.so
+/usr/lib/unrealircd/usermodes/regonlymsg.so
+/usr/lib/unrealircd/lag.so
+/usr/lib/unrealircd/setname.so
+/usr/lib/unrealircd/whois.so
+/usr/lib/unrealircd/sinfo.so
+/usr/lib/unrealircd/svsjoin.so
+/usr/lib/unrealircd/cycle.so
+/usr/lib/unrealircd/svssilence.so
+/usr/lib/unrealircd/addmotd.so
+/usr/lib/unrealircd/sts.so
+/usr/lib/unrealircd/kick.so
+/usr/lib/unrealircd/connect.so
+/usr/lib/unrealircd/ison.so
+/usr/lib/unrealircd/userip.so
+/usr/lib/unrealircd/tkl.so
+/usr/lib/unrealircd/sqline.so
+/usr/lib/unrealircd/trace.so
+/usr/lib/unrealircd/userhost.so
+/usr/lib/unrealircd/map.so
+/usr/lib/unrealircd/botmotd.so
+/usr/lib/unrealircd/protoctl.so
+/usr/lib/unrealircd/svslusers.so
+/usr/lib/unrealircd/rules.so
+/usr/lib/unrealircd/unsqline.so
+/usr/lib/unrealircd/whowas.so
+/usr/lib/unrealircd/jumpserver.so
+/usr/lib/unrealircd/cloak.so
+/usr/lib/unrealircd/dccdeny.so
+/usr/lib/unrealircd/umode2.so
+/usr/lib/unrealircd/vhost.so
+/usr/lib/unrealircd/md.so
+/usr/lib/unrealircd/nocodes.so
+/usr/lib/unrealircd/antimixedutf8.so
+/usr/lib/unrealircd/userhost-tag.so
+/usr/lib/unrealircd/svswatch.so
+/usr/lib/unrealircd/sdesc.so
+/usr/lib/unrealircd/ircops.so
+/usr/lib/unrealircd/rmtkl.so
+/usr/lib/unrealircd/chghost.so
+/usr/lib/unrealircd/extbans
+/usr/lib/unrealircd/extbans/certfp.so
+/usr/lib/unrealircd/extbans/realname.so
+/usr/lib/unrealircd/extbans/msgbypass.so
+/usr/lib/unrealircd/extbans/partmsg.so
+/usr/lib/unrealircd/extbans/quiet.so
+/usr/lib/unrealircd/extbans/account.so
+/usr/lib/unrealircd/extbans/operclass.so
+/usr/lib/unrealircd/extbans/textban.so
+/usr/lib/unrealircd/extbans/timedban.so
+/usr/lib/unrealircd/extbans/nickchange.so
+/usr/lib/unrealircd/extbans/inchannel.so
+/usr/lib/unrealircd/extbans/join.so
+/usr/lib/unrealircd/sapart.so
+/usr/lib/unrealircd/channeldb.so
+/usr/lib/unrealircd/pingpong.so
+/usr/lib/unrealircd/chgname.so
+/usr/lib/unrealircd/pass.so
+/usr/lib/unrealircd/webirc.so
+/usr/lib/unrealircd/authprompt.so
+/usr/lib/unrealircd/svskill.so
+/usr/lib/unrealircd/nick.so
+/usr/lib/unrealircd/reputation.so
+/usr/lib/unrealircd/message-tags.so
+/usr/lib/unrealircd/setident.so
+/usr/lib/unrealircd/knock.so
+/usr/lib/unrealircd/wallops.so
+/usr/lib/unrealircd/locops.so
+/usr/lib/unrealircd/charsys.so
+/usr/lib/unrealircd/whox.so
+/usr/lib/unrealircd/history_backend_mem.so
+/usr/lib/unrealircd/sethost.so
+/usr/lib/unrealircd/ident_lookup.so
+/usr/lib/unrealircd/oper.so
+/usr/lib/unrealircd/swhois.so
+/usr/lib/unrealircd/tls_antidos.so
+/usr/lib/unrealircd/mkpasswd.so
+/usr/lib/unrealircd/sendumode.so
+/usr/lib/unrealircd/kill.so
+/usr/lib/unrealircd/addomotd.so
+/usr/lib/unrealircd/who_old.so
+/usr/lib/unrealircd/require-module.so
+/usr/lib/unrealircd/labeled-response.so
+/usr/lib/unrealircd/message-ids.so
+/usr/lib/unrealircd/join.so
+/usr/lib/unrealircd/watch.so
+/usr/lib/unrealircd/hideserver.so
+/usr/lib/unrealircd/silence.so
+/usr/lib/unrealircd/svsnoop.so
+/usr/lib/unrealircd/samode.so
+/usr/lib/unrealircd/close.so
+/usr/lib/unrealircd/svspart.so
+/usr/lib/unrealircd/help.so
+/usr/lib/unrealircd/svssno.so
+/usr/lib/unrealircd/opermotd.so
+/usr/lib/unrealircd/netinfo.so
+/usr/lib/unrealircd/server.so
+/usr/lib/unrealircd/invite.so
+/usr/lib/unrealircd/sasl.so
+/usr/lib/unrealircd/squit.so
+/usr/lib/unrealircd/motd.so
+/usr/lib/unrealircd/globops.so
+/usr/lib/unrealircd/server-time.so
+/usr/lib/unrealircd/svsnick.so
+/usr/lib/unrealircd/account-tag.so
+/usr/lib/unrealircd/svsnolag.so
+/usr/lib/unrealircd/antirandom.so
+/usr/lib/unrealircd/links.so
+/usr/lib/systemd/system/unrealircd.service
+/usr/lib/tmpfiles.d/unrealircd.conf
+/usr/bin/unrealircd
+/var/cache/unrealircd
+/var/cache/pacman/pkg/unrealircd-5.0.3.1-1-x86_64.pkg.tar.zst
+/var/lib/unrealircd
+/var/lib/pacman/local/unrealircd-5.0.3.1-1
+/var/lib/pacman/local/unrealircd-5.0.3.1-1/mtree
+/var/lib/pacman/local/unrealircd-5.0.3.1-1/install
+/var/lib/pacman/local/unrealircd-5.0.3.1-1/files
+/var/lib/pacman/local/unrealircd-5.0.3.1-1/desc
+/var/log/unrealircd
+</code>
+</pre>
+<p> この中からいくつか抜粋してみる. /usr/share/ はドキュメント類を入れたりするのに使われるが, unrealircdの場合はあまり有用な情報がなかったりする.
+<pre>
+<code>
+/usr/share/doc/unrealircd
+/usr/share/doc/unrealircd/coding-guidelines
+/usr/share/doc/unrealircd/Authors
+/usr/share/doc/unrealircd/tao.of.irc
+</code>
+</pre>
+<p> unrealircdは, confファイルをいじることから始まる. confファイルと言っても色々あるが, メインのconfファイルが様々なconfファイルをincludeする. confファイルはArchの場合 /etc/unrealircd/ に置いてある. 
+多くのモジュールがmodules.default.confにリストされincludeで導入できる. これらのconfファイルは後で解説する.
+<pre>
+<code>
+include "modules.default.conf";
+include "help/help.conf";
+include "badwords.conf";
+// include "spamfilter.conf";
+include "operclass.default.conf";
+</code>
+</pre>
+
+<p> unrealircdはサーバー単位のものであり, ネットワーク単位ではない. IRC network内でユニークなsidを指定する. sidは先頭3つが数字なら大体OK. conf自体に説明が書かれている. nameというのはサーバー名. 
+<pre>
+<code>
+me {
+	name "irc.foonet.com";
+	info "FooNet Server";
+	sid "001";
+};
+</code>
+</pre>
+
+<p> adminというのは/admin コマンドで表示されるサーバー管理者の情報を設定する. 
+<pre>
+<code>
+admin {
+	"Bob Smith";
+	"bob";
+	"widely@used.name";
+};
+</code>
+</pre>
+
+<p> classブロック. ユーザーやサーバーごとに通信量などを設定し調節する. 
+<pre>
+<code>
+/* Clients and servers are put in class { } blocks, we define them here.
+ * Class blocks consist of the following items:
+ * - pingfreq: how often to ping a user / server (in seconds)
+ * - connfreq: how often we try to connect to this server (in seconds)
+ * - sendq: the maximum queue size for a connection
+ * - recvq: maximum receive queue from a connection (flood control)
+ */
+
+/* Client class with good defaults */
+class clients
+{
+	pingfreq 90;
+	maxclients 1000;
+	sendq 200k;
+	recvq 8000;
+};
+
+/* Special class for IRCOps with higher limits */
+class opers
+{
+	pingfreq 90;
+	maxclients 50;
+	sendq 1M;
+	recvq 8000;
+};
+</code>
+</pre>
+
+<p> 
+<pre>
+<code>
+
+/* Server class with good defaults */
+class servers
+{
+	pingfreq 60;
+	connfreq 15; /* try to connect every 15 seconds */
+	maxclients 10; /* max servers */
+	sendq 20M;
+};
+
+/* Allow blocks define which clients may connect to this server.
+ * This allows you to add a server password or restrict the server to
+ * specific IP's only. You also configure the maximum connections
+ * allowed per IP here.
+ * See also: https://www.unrealircd.org/docs/Allow_block
+ */
+
+/* Allow everyone in, but only 3 connections per IP */
+allow {
+	ip *@*;
+	class clients;
+	maxperip 3;
+};
+
+/* Example of a special allow block on a specific IP:
+ * Requires users on that IP to connect with a password. If the password
+ * is correct then it permits 20 connections on that IP.
+ */
+allow {
+	ip *@192.0.2.1;
+	class clients;
+	password "somesecretpasswd";
+	maxperip 20;
+};
+</code>
+</pre>
+
+<h2>modules.default.conf</h2>
+<p> modules.default.confを覗いてみる. loadmodule "モジュール名" という極めて簡潔な文法しか使われていない. 
+<pre>
+<code>
+/*** Cloaking (for user mode +x) ***/
+loadmodule "cloak";
+
+/*** Commands ***/
+
+// User commands (MINIMAL)
+// These provide just the minimal set of IRC commands that are
+// required by RFC1459 along with WATCH and MAP.
+loadmodule "admin";
+loadmodule "away";
+loadmodule "invite";
+loadmodule "ison";
+loadmodule "join";
+loadmodule "kick";
+loadmodule "links";
+loadmodule "list";
+loadmodule "lusers";
+loadmodule "map";
+loadmodule "message";
+loadmodule "mode";
+loadmodule "motd";
+loadmodule "names";
+loadmodule "nick";
+loadmodule "part";
+loadmodule "pass";
+loadmodule "pingpong";
+loadmodule "protoctl";
+loadmodule "quit";
+loadmodule "rules";
+loadmodule "topic";
+loadmodule "user";
+loadmodule "userhost";
+loadmodule "watch";
+loadmodule "whox";
+loadmodule "whois";
+loadmodule "whowas";
+
+// User commands (EXTENDED)
+// These are commands that provide extended functionality.
+loadmodule "botmotd";
+loadmodule "cap";
+loadmodule "cycle";
+loadmodule "dccallow";
+loadmodule "help";
+loadmodule "knock";
+loadmodule "lag";
+loadmodule "sasl";
+loadmodule "setname";
+loadmodule "silence";
+loadmodule "starttls";
+loadmodule "time";
+loadmodule "userip";
+loadmodule "vhost";
+loadmodule "history";
+
+// IRC Operator commands
+// Note: several of these like kill are also server-to-server commands
+// which are required if you link to other servers.
+loadmodule "addmotd";
+loadmodule "addomotd";
+loadmodule "chghost";
+loadmodule "chgident";
+loadmodule "chgname";
+loadmodule "close";
+loadmodule "connect";
+loadmodule "squit";
+loadmodule "dccdeny";
+loadmodule "globops";
+loadmodule "kill"; /* also server-to-server */
+loadmodule "locops";
+loadmodule "mkpasswd";
+loadmodule "oper";
+loadmodule "opermotd";
+loadmodule "sajoin";
+loadmodule "samode";
+loadmodule "sapart";
+loadmodule "sdesc";
+loadmodule "sethost";
+loadmodule "setident";
+loadmodule "stats";
+loadmodule "tkl"; /* also server-to-server */
+loadmodule "trace";
+loadmodule "tsctl";
+loadmodule "unsqline";
+loadmodule "wallops";
+loadmodule "jumpserver";
+
+// Server-to-server commands
+// Don't remove these, unless you never link to other servers.
+loadmodule "eos";
+loadmodule "md";
+loadmodule "netinfo";
+loadmodule "server";
+loadmodule "sjoin";
+loadmodule "sqline";
+loadmodule "swhois";
+loadmodule "umode2";
+loadmodule "sinfo";
+loadmodule "require-module";
+
+// Services commands
+// You could disable these if you don't use Services
+// https://www.unrealircd.org/docs/Services
+loadmodule "sendsno";
+loadmodule "sendumode";
+loadmodule "svsjoin";
+loadmodule "svskill";
+loadmodule "svslusers";
+loadmodule "svsmode";
+loadmodule "svsmotd";
+loadmodule "svsnick";
+loadmodule "svsnline";
+loadmodule "svsnolag";
+loadmodule "svsnoop";
+loadmodule "svspart";
+loadmodule "svssilence";
+loadmodule "svssno";
+loadmodule "svswatch";
+
+
+/*** Channel modes ***/
+loadmodule "chanmodes/floodprot"; /* +f */
+loadmodule "chanmodes/nocolor"; /* +c */
+loadmodule "chanmodes/noctcp"; /* +C */
+loadmodule "chanmodes/stripcolor"; /* +S */
+loadmodule "chanmodes/issecure"; /* +Z */
+loadmodule "chanmodes/permanent"; /* +P */
+loadmodule "chanmodes/link"; /* +L */
+loadmodule "chanmodes/censor"; /* +G */
+loadmodule "chanmodes/delayjoin"; /* +D  */
+loadmodule "chanmodes/noknock"; /* +K */
+loadmodule "chanmodes/noinvite"; /* +V */
+loadmodule "chanmodes/operonly"; /* +O */
+loadmodule "chanmodes/nonotice"; /* +T */
+loadmodule "chanmodes/regonly"; /* +R */
+loadmodule "chanmodes/nonickchange"; /* +N */
+loadmodule "chanmodes/nokick"; /* +Q */
+loadmodule "chanmodes/regonlyspeak"; /* +M */
+loadmodule "chanmodes/secureonly"; /* +z */
+loadmodule "chanmodes/history"; /* +H */
+
+
+/*** User modes ***/
+loadmodule "usermodes/bot"; /* +B (mark yourself as a bot) */
+loadmodule "usermodes/servicebot"; /* +S (service bot) */
+loadmodule "usermodes/noctcp"; /* +T (block CTCP's) */
+loadmodule "usermodes/censor"; /* +G (censor bad words) */
+loadmodule "usermodes/showwhois"; /* +W (show if someone does /WHOIS) */
+loadmodule "usermodes/privacy"; /* +p (privacy, hide channels in /WHOIS) */
+loadmodule "usermodes/nokick"; /* +q (unkickable oper) */
+loadmodule "usermodes/regonlymsg"; /* +R (only registered users may private message you) */
+loadmodule "usermodes/secureonlymsg"; /* +Z (only SSL/TLS users may private message you) */
+loadmodule "usermodes/privdeaf"; /* +D (don't let other user PM you) */
+
+
+/*** Server notice masks */
+loadmodule "snomasks/dccreject"; /* +D (rejected DCC's) */
+
+
+/*** Extended Bans ***/
+loadmodule "extbans/join"; /* +b ~j (prevent only joins) */
+loadmodule "extbans/quiet"; /* +b ~q (prevent only messaging) */
+loadmodule "extbans/nickchange"; /* +b ~n (prevent only nick changes) */
+loadmodule "extbans/realname"; /* +b ~r (ban by real name) */
+loadmodule "extbans/account"; /* +b ~a (ban/exempt if logged in with services account) */
+loadmodule "extbans/inchannel"; /* +b ~c (ban/exempt if in channel) */
+loadmodule "extbans/operclass"; /* +b ~O (ban/exempt by operclass) */
+loadmodule "extbans/certfp"; /* +b ~S (ban/exempt by certfp) */
+loadmodule "extbans/textban"; /* +b ~T (censor or block text) */
+loadmodule "extbans/msgbypass"; /* +e ~m (bypass message restrictions) */
+loadmodule "extbans/timedban"; /* +b ~t (timed bans / temporary bans) */
+loadmodule "extbans/partmsg"; /* +b ~p (hide part/quit message) */
+
+
+/** IRCv3 extensions */
+loadmodule "account-notify"; /* send ACCOUNT message upon services account login */
+loadmodule "message-tags"; /* add tags to messages, required for various IRCv3 features */
+loadmodule "batch"; /* also required for several IRCv3 features */
+loadmodule "account-tag"; /* adds services account information to messages */
+loadmodule "link-security"; /* link-security announce */
+loadmodule "message-ids"; /* adds unique msgid to various messages */
+loadmodule "plaintext-policy"; /* plaintext-policy announce */
+loadmodule "server-time"; /* adds server timestamp to various messages */
+loadmodule "sts"; /* strict transport policy (set::tls::sts-policy) */
+loadmodule "echo-message"; /* shows clients if their messages are altered/filtered */
+loadmodule "labeled-response"; /* correlate requests and responses easily */
+
+
+/*** Other ***/
+// These are modules that don't fit in any of the previous sections
+loadmodule "ident_lookup"; /* Ident lookups if set::options::identd-check is set*/
+loadmodule "certfp"; /* SSL/TLS certificate fingerprint in /WHOIS (& more) */
+loadmodule "tls_antidos"; /* prevent TLS DoS (renegotiate floods) */
+loadmodule "webirc"; /* WEBIRC command. See webirc block. */
+loadmodule "blacklist"; /* Blacklist support (DNSBL). See blacklist block. */
+loadmodule "jointhrottle"; /* set::anti-flood::join-flood (previously chanmode +j) */
+loadmodule "charsys"; /* Provides set::allowed-nickchars (must always be loaded!) */
+loadmodule "authprompt"; /* Authentication prompt, see set::authentication-prompt */
+loadmodule "history_backend_mem"; /* History storage backend (used by chanmodes/history) */
+loadmodule "tkldb"; /* Write TKLines to .db file */
+loadmodule "channeldb"; /* Write channel settings to .db file (+P channels only) */
+loadmodule "rmtkl"; /* Easily remove *-Lines in bulk with /RMTKL */
+loadmodule "restrict-commands"; /* Provides set::restrict-commands settings */
+loadmodule "reputation"; /* used by Connthrottle and others, see next */
+loadmodule "connthrottle"; /* see https://www.unrealircd.org/docs/Connthrottle */
+loadmodule "userip-tag"; /* unrealircd.org/userip-tag for ircops */
+loadmodule "userhost-tag"; /* unrealircd.org/userhost-tag for ircops */
+
+</code>
+</pre>
+
+<h2>help/help.conf</h2>
+<p> help {}; かhelp "検索名" {}; という形だけ.  /HELPOP は大体/helpを指すが, 大きく別れて6項目ある. IRCの世界ではコマンドで大文字と小文字を区別しなくても大体OKだ. /help join /help JOIN /hElp jOiN だろうがOK. 自分が新しいコマンドを追加する時に, こういうヘルプはhelp.confに直接書き込むのではなく別のファイルを用意する方がアップデート時に楽だ.
+<pre>
+<code>
+/* UnrealIRCd 5 Help Configuration
+ * Based on the original help text written by hAtbLaDe
+ * Revised by CC (07/2002) and many others
+ */
+
+help {
+	" Server Commands Help.";
+	" Specify your Question after the /HELPOP command.";
+	" You will find all of the server commands and options";
+	" available for use.";
+	" If you need extra assistance please visit the server's";
+	" help channel or ask an available IRCop.";
+	" -";
+	" /HELPOP USERCMDS - To get the list of User Commands";
+	" /HELPOP OPERCMDS - To get the list of Oper Commands";
+	" /HELPOP SVSCMDS  - Commands sent via U-Lined Server (Services)";
+	" /HELPOP UMODES   - To get the list of User Modes";
+	" /HELPOP SNOMASKS - To get a list of Snomasks";
+	" /HELPOP CHMODES  - To get the list of Channel Modes";
+	" -";
+	" ==-------------------------oOo--------------------------==";
+};
+
+/* note: indexes were generated by cat somecmds|sort|column -c 70
+ *       along with tab-&gtspace conversion (tabwidth 8).
+ *       Perhaps we should automate this step :). -- Syzop
+ */
+
+help Usercmds {
+	" Currently the following User commands are available.";
+	" Use /HELPOP &ltcommand name&gt to get more information about";
+	" a specific command.";
+	" -";
+	" ==-------------------------oOo-------------------------==";
+	" ADMIN           LICENSE         PART            USERHOST";
+	" AWAY            LINKS           PING            USERIP";
+	" CREDITS         LIST            PONG            VERSION";
+	" CYCLE           LUSERS          PRIVMSG         VHOST";
+	" DALINFO         MAP             QUIT            WATCH";
+	" DCCALLOW        MODE            RULES           WHO";
+	" INVITE          MODULE          SETNAME         WHOIS";
+	" ISON            MOTD            SILENCE         WHOWAS";
+	" JOIN            NAMES           STATS";
+	" KICK            NICK            TIME";
+	" KNOCK           NOTICE          TOPIC";
+	" ==-------------------------oOo-------------------------==";
+};
+
+help Opercmds {
+	" This section gives the IRC Operator only commands.";
+	" Use /HELPOP &ltcommand name&gt to get more information about";
+	" a specific command.";
+	" -";
+	" See also https://www.unrealircd.org/docs/IRCOp_guide";
+	" -";
+	" ==-------------------------oOo-------------------------==";
+	"                 DNS                             SETIDENT";
+	" ADDMOTD         GLINE           OPER            SHUN";
+	" ADDOMOTD        GLOBOPS         OPERMOTD        SPAMFILTER";
+	"                 GZLINE          REHASH          SQUIT";
+	" CHGHOST                         RESTART         TEMPSHUN";
+	" CHGIDENT        KILL                            TRACE";
+	" CHGNAME         KLINE           SAJOIN          TSCTL";
+	" CLOSE           LAG             SAMODE          UNDCCDENY";
+	" CONNECT         LOCOPS          SAPART          WALLOPS";
+	" DCCDENY         MKPASSWD        SDESC           ZLINE";
+	" DIE             MODULE          SETHOST";
+	" ==-------------------------oOo-------------------------==";
+};
+
+</code>
+</pre>
+<h2>spamfilter.conf</h2>
+<p>
+</body>
+</html>
+
+
+
+
+
+/* Oper blocks define your IRC Operators.
+ * IRC Operators are people who have "extra rights" compared to others,
+ * for example they may /KILL other people, initiate server linking,
+ * /JOIN channels even though they are banned, etc.
+ *
+ * For more information about becoming an IRCOp and how to do admin
+ * tasks, see: https://www.unrealircd.org/docs/IRCOp_guide
+ *
+ * For details regarding the oper { } block itself, see
+ * https://www.unrealircd.org/docs/Oper_block
+ */
+
+/* Here is an example oper block for 'bobsmith' with password 'test'.
+ * You MUST change this!!
+ */
+oper bobsmith {
+	class opers;
+	mask *@*;
+	password "test";
+	/* Oper permissions are defined in an 'operclass' block.
+	 * See https://www.unrealircd.org/docs/Operclass_block
+	 * UnrealIRCd ships with a number of default blocks, see
+	 * the article for a full list. We choose 'netadmin' here.
+	 */
+	operclass netadmin;
+	swhois "is a Network Administrator";
+	vhost netadmin.mynet.org;
+};
+
+/* Listen blocks define the ports where the server should listen on.
+ * In other words: the ports that clients and servers may use to
+ * connect to this server.
+ * 
+ * Syntax:
+ * listen {
+ * { 
+ *   ip <ip>;
+ *   port <port>;
+ *   options {
+ *     <options....>;
+ *   };
+ * };
+ */
+
+/* Standard IRC port 6667 */
+listen {
+	ip *;
+	port 6667;
+};
+
+/* Standard IRC SSL/TLS port 6697 */
+listen {
+	ip *;
+	port 6697;
+	options { tls; };
+};
+
+/* Special SSL/TLS servers-only port for linking */
+listen {
+	ip *;
+	port 6900;
+	options { tls; serversonly; };
+};
+
+/* NOTE: If you are on an IRCd shell with multiple IP's and you use
+ *       the above listen { } blocks then you will likely get an
+ *       'Address already in use' error and the ircd won't start.
+ *       This means you MUST bind to a specific IP instead of '*' like:
+ *       listen { ip 1.2.3.4; port 6667; };
+ *       Of course, replace the IP with the IP that was assigned to you.
+ */
+
+/*
+ * Link blocks allow you to link multiple servers together to form a network.
+ * See https://www.unrealircd.org/docs/Tutorial:_Linking_servers
+ */
+link hub.mynet.org
+{
+	incoming {
+		mask *@something;
+	};
+
+	outgoing {
+		bind-ip *; /* or explicitly an IP */
+		hostname hub.mynet.org;
+		port 6900;
+		options { tls; };
+	};
+
+	/* We use the SPKI fingerprint of the other server for authentication.
+	 * Run './unrealircd spkifp' on the other side to get it.
+	 */
+	password "AABBCCDDEEFFGGHHIIJJKKLLMMNNOOPPQQRRSSTTUUV=" { spkifp; };
+
+	class servers;
+};
+
+/* The link block for services is usually much simpler.
+ * For more information about what Services are,
+ * see https://www.unrealircd.org/docs/Services
+ */
+link services.mynet.org
+{
+	incoming {
+		mask 127.0.0.1;
+	};
+
+	password "changemeplease";
+
+	class servers;
+};
+
+/* U-lines give other servers (even) more power/commands.
+ * If you use services you must add them here.
+ * NEVER put the name of an UnrealIRCd server here!!!
+ */
+ulines {
+	services.mynet.org;
+};
+
+/* Here you can add a password for the IRCOp-only /DIE and /RESTART commands.
+ * This is mainly meant to provide a little protection against accidental
+ * restarts and server kills.
+ */
+drpass {
+	restart "restart";
+	die "die";
+};
+
+/* The log block defines what should be logged and to what file.
+ * See also https://www.unrealircd.org/docs/Log_block
+ */
+
+/* This is a good default, it logs almost everything */
+log "ircd.log" {
+	flags {
+		oper;
+		connects;
+		server-connects;
+		kills;
+		errors;
+		sadmin-commands;
+		chg-commands;
+		oper-override;
+		tkl;
+		spamfilter;
+	};
+};
+
+/* With "aliases" you can create an alias like /SOMETHING to send a message to
+ * some user or bot. They are usually used for services.
+ *
+ * We have a number of pre-set alias files, check out the alias/ directory.
+ * As an example, here we include all aliases used for anope services.
+ */
+include "aliases/anope.conf";
+
+/* Ban nick names so they cannot be used by regular users */
+ban nick {
+	mask "*C*h*a*n*S*e*r*v*";
+	reason "Reserved for Services";
+};
+
+/* Ban ip.
+ * Note that you normally use /KLINE, /GLINE and /ZLINE for this.
+ */
+ban ip {
+	mask 195.86.232.81;
+	reason "Hate you";
+};
+
+/* Ban server - if we see this server linked to someone then we delink */
+ban server {
+	mask eris.berkeley.edu;
+	reason "Get out of here.";
+};
+
+/* Ban user - just as an example, you normally use /KLINE or /GLINE for this */
+ban user {
+	mask *tirc@*.saturn.bbn.com;
+	reason "Idiot";
+};
+
+/* Ban realname allows you to ban clients based on their 'real name'
+ * or 'gecos' field.
+ */
+ban realname {
+	mask "Swat Team";
+	reason "mIRKFORCE";
+};
+
+ban realname {
+	mask "sub7server";
+	reason "sub7";
+};
+
+/* Ban and TKL exceptions. Allows you to exempt users / machines from
+ * KLINE, GLINE, etc.
+ * If you are an IRCOp with a static IP (and no untrusted persons on that IP)
+ * then we suggest you add yourself here. That way you can always get in
+ * even if you accidentally place a *LINE ban on yourself.
+ */
+
+/* except ban protects you from KLINE and ZLINE */
+except ban {
+	mask *@192.0.2.1;
+	// you may add more mask entries here..
+};
+
+/* except ban with type 'all' protects you from GLINE, GZLINE, QLINE, SHUN */
+except ban {
+	mask *@192.0.2.1;
+	type all;
+};
+
+/* With deny dcc blocks you can ban filenames for DCC */
+deny dcc {
+	filename "*sub7*";
+	reason "Possible Sub7 Virus";
+};
+
+/* deny channel allows you to ban a channel (mask) entirely */
+deny channel {
+	channel "*warez*";
+	reason "Warez is illegal";
+	class "clients";
+};
+
+/* VHosts (Virtual Hosts) allow users to acquire a different host.
+ * See https://www.unrealircd.org/docs/Vhost_block
+ */
+
+/* Example vhost which you can use. On IRC type: /VHOST test test
+ * NOTE: only people with an 'unrealircd.com' host may use it so
+ *       be sure to change the vhost::mask before you test.
+ */
+vhost {
+	vhost i.hate.microsefrs.com;
+	mask *@unrealircd.com;
+	login "test";
+	password "test";
+};
+
+/* Blacklist blocks will query an external DNS Blacklist service
+ * whenever a user connects, to see if the IP address is known
+ * to cause drone attacks, is a known hacked machine, etc.
+ * Documentation: https://www.unrealircd.org/docs/Blacklist_block
+ * Or just have a look at the blocks below.
+ */
+
+/* DroneBL, probably the most popular blacklist used by IRC Servers.
+ * See https://dronebl.org/ for their documentation and the
+ * meaning of the reply types. At time of writing we use types:
+ * 3: IRC Drone, 5: Bottler, 6: Unknown spambot or drone,
+ * 7: DDoS Drone, 8: SOCKS Proxy, 9: HTTP Proxy, 10: ProxyChain,
+ * 11: Web Page Proxy, 12: Open DNS Resolver, 13: Brute force attackers,
+ * 14: Open Wingate Proxy, 15: Compromised router / gateway,
+ * 16: Autorooting worms.
+ */
+blacklist dronebl {
+        dns {
+                name dnsbl.dronebl.org;
+                type record;
+                reply { 3; 5; 6; 7; 8; 9; 10; 11; 12; 13; 14; 15; 16; };
+        };
+        action gline;
+        ban-time 24h;
+        reason "Proxy/Drone detected. Check https://dronebl.org/lookup?ip=$ip for details.";
+};
+
+/* EFnetRBL, see https://rbl.efnetrbl.org/ for documentation
+ * and the meaning of the reply types.
+ * At time of writing: 1 is open proxy, 4 is TOR, 5 is drones/flooding.
+ *
+ * NOTE: If you want to permit TOR proxies on your server, then
+ *       you need to remove the '4;' below in the reply section.
+ */
+blacklist efnetrbl {
+        dns {
+                name rbl.efnetrbl.org;
+                type record;
+                reply { 1; 4; 5; };
+        };
+        action gline;
+        ban-time 24h;
+        reason "Proxy/Drone/TOR detected. Check https://rbl.efnetrbl.org/?i=$ip for details.";
+};
+
+/* You can include other configuration files */
+/* include "klines.conf"; */
+
+/* Network configuration */
+set {
+	network-name 		"MYNet";
+	default-server 		"irc.mynet.org";
+	services-server 	"services.mynet.org";
+	stats-server 		"stats.mynet.org";
+	help-channel 		"#Help";
+	hiddenhost-prefix	"Clk";
+	prefix-quit 		"Quit";
+
+	/* Cloak keys should be the same at all servers on the network.
+	 * They are used for generating masked hosts and should be kept secret.
+	 * The keys should be 3 random strings of 50-100 characters
+	 * and must consist of lowcase (a-z), upcase (A-Z) and digits (0-9).
+	 * HINT: On *NIX, you can run './unrealircd gencloak' in your shell to let
+	 *       UnrealIRCd generate 3 random strings for you.
+	 */
+	cloak-keys {
+		"aoAr1HnR6gl3sJ7hVz4Zb7x4YwpW";
+		"and another one";
+		"and another one";
+	};
+};
+
+/* Server specific configuration */
+
+set {
+	kline-address "set.this.to.email.address"; /* e-mail or URL shown when a user is banned */
+	modes-on-connect "+ixw"; /* when users connect, they will get these user modes */
+	modes-on-oper "+xwgs"; /* when someone becomes IRCOp they'll get these modes */
+	modes-on-join "+nt"; /* default channel modes when a new channel is created */
+	oper-auto-join "#opers"; /* IRCOps are auto-joined to this channel */
+	options {
+		hide-ulines; /* hide U-lines in /MAP and /LINKS */
+		show-connect-info; /* show "looking up your hostname" messages on connect */
+	};
+
+	maxchannelsperuser 10; /* maximum number of channels a user may /JOIN */
+
+	/* The minimum time a user must be connected before being allowed to
+	 * use a QUIT message. This will hopefully help stop spam.
+	 */
+	anti-spam-quit-message-time 10s;
+
+	/* Or simply set a static quit, meaning any /QUIT reason is ignored */
+	/* static-quit "Client quit";	*/
+
+	/* static-part does the same for /PART */
+	/* static-part yes; */
+
+	/* Flood protection */
+	anti-flood {
+		nick-flood 3:60;	/* 3 nick changes per 60 seconds (the default) */
+		connect-flood 3:60; /* 3 connection attempts per 60 seconds (the default) */
+		away-flood 4:120;	/* 4 times per 2 minutes you may use /AWAY (default) */
+	};
+
+	/* Settings for spam filter */
+	spamfilter {
+		ban-time 1d; /* default duration of a *LINE ban set by spamfilter */
+		ban-reason "Spam/Advertising"; /* default reason */
+		virus-help-channel "#help"; /* channel to use for 'viruschan' action */
+		/* except "#help"; channel to exempt from Spamfilter */
+	};
+
+	/* Restrict certain commands.
+	 * See https://www.unrealircd.org/docs/Set_block#set::restrict-commands
+	 */
+	restrict-commands {
+		list {
+			connect-delay 60;
+			exempt-identified yes;
+			exempt-reputation-score 24;
+		};
+		invite {
+			connect-delay 120;
+			exempt-identified yes;
+			exempt-reputation-score 24;
+		};
+		/* In addition to the ability to restrict any command,
+		 * such as shown above. There are also 4 special types
+		 * that you can restrict. These are "private-message",
+		 * "private-notice", "channel-message" and "channel-notice".
+		 * They are commented out (disabled) in this example:
+		 */
+		//private-message {
+		//	connect-delay 10;
+		//};
+		//private-notice {
+		//	connect-delay 10;
+		//};
+	};
+};
+
+/*
+ * The following will configure connection throttling of "unknown users".
+ *
+ * When UnrealIRCd detects a high number of users connecting from IP addresses
+ * that have not been seen before, then connections from new IP's are rejected
+ * above the set rate. For example at 10:60 only 10 users per minute can connect
+ * that have not been seen before. Known IP addresses can always get in,
+ * regardless of the set rate. Same for users who login using SASL.
+ *
+ * See also https://www.unrealircd.org/docs/Connthrottle for details.
+ * Or just keep reading the default configuration settings below:
+ */
+
+set {
+	connthrottle {
+		/* First we must configure what we call "known users".
+		 * By default these are users on IP addresses that have
+		 * a score of 24 or higher. A score of 24 means that the
+		 * IP was connected to this network for at least 2 hours
+		 * in the past month (or minimum 1 hour if registered).
+		 * The sasl-bypass option is another setting. It means
+		 * that users who authenticate to services via SASL
+		 * are considered known users as well.
+		 * Users in the "known-users" group (either by reputation
+		 * or by SASL) are always allowed in by this module.
+		 */
+		known-users {
+			minimum-reputation-score 24;
+			sasl-bypass yes;
+		};
+
+		/* New users are all users that do not belong in the
+		 * known-users group. They are considered "new" and in
+		 * case of a high number of such new users connecting
+		 * they are subject to connection rate limiting.
+		 * By default the rate is 20 new local users per minute
+		 * and 30 new global users per minute.
+		 */
+		new-users {
+			local-throttle 20:60;
+			global-throttle 30:60;
+		};
+
+		/* This configures when this module will NOT be active.
+		 * The default settings will disable the module when:
+		 * - The reputation module has been running for less than
+		 *   a week. If running less than 1 week then there is
+		 *   insufficient data to consider who is a "known user".
+		 * - The server has just been booted up (first 3 minutes).
+		 */
+		disabled-when {
+			reputation-gathering 1w;
+			start-delay 3m;
+		};
+	};
+};
+
+/* Finally, you may wish to have a MOTD (Message of the Day), this can be
+ * done by creating an 'ircd.motd' text file in your conf/ directory.
+ * This file will be shown to your users on connect.
+ * For more information see https://www.unrealircd.org/docs/MOTD_and_Rules
+ */
+
+/*
+ * Problems or need more help?
+ * 1) https://www.unrealircd.org/docs/UnrealIRCd_4_documentation
+ * 2) https://www.unrealircd.org/docs/FAQ <- answers 80% of your questions!
+ * 3) If you are still having problems then you can get support:
+ *    - Forums: https://forums.unrealircd.org/
+ *    - IRC: irc.unrealircd.org (SSL on port 6697) / #unreal-support
+ *    Note that we require you to read the documentation and FAQ first!
+ */

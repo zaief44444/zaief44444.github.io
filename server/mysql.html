@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>ArchでMySQLの環境構築</title>
+<meta http-equive="content-type" charset="utf-8">
+<link rel="icon" href="/img/favicon.ico">
+<link rel="stylesheet" href="/css/simple.css">
+</head>
+<body>
+<p><a href="./">戻る</a>
+<h1>ArchでMySQLの環境構築</h1>
+<p> Nov 13, 2020
+<p> MySQLの実装としてArchではMariaDBがデフォルトで採用されている. MySQLはCentOS向けの情報ばかりでArch向けの情報があまりないと感じたので今回ここでまとめる.
+<p> まずはインストールする. mysqlをインストールしようとすると, 自動的にmariadbをデフォルトでインストールしようとしてくれる. そのつぎにmariadb-install-dbコマンドで初期設定をする. このコマンドを実行することでシステムにmysqlというユーザーが追加される.
+
+<pre>
+<code>
+sudo pacman -S mysql
+sudo mariadb-install-db --user=mysql --basedir=/usr --datadir=/var/lib/mysql
+</code>
+</pre>
+<p> デーモンを起動する. 
+
+<pre>
+<code>
+sudo systemctl enable mysql
+sudo systemctl start mysql
+</code>
+</pre>
+
+<p> startで失敗する場合は, 次のコマンドを実行してstartし直すとうまくいくはず.
+<pre>
+<code>
+sudo systemctl daemon-reexec
+</code>
+</pre>
+
+<p> mysqlのデータユーザーを作成し, mydbというデータベースに対する全ての権限を与える. 初期状態ではパスワードは何も設定されていない. <a href="https://www.dbonline.jp/mysql/user/index1.html">ユーザーを作成する(CREATE USER文)</a> が参考になる. -uはユーザーを指定, -pはパスワード認証でログインするという意味. パスワードを設定していない場合を除いて, -pは必ずつける.
+<pre>
+<code>
+sudo mysql -u root -p
+MariaDB&gt CREATE USER 'monty'@'localhost' IDENTIFIED BY 'some_pass';
+MariaDB&gt GRANT ALL PRIVILEGES ON mydb.* TO 'monty'@'localhost';
+MariaDB&gt FLUSH PRIVILEGES;
+MariaDB&gt quit
+</code>
+</pre>
+<p> MariaDBの設定ファイルは /etc/my.cnf /etc/my.cnf.d/ ~/.my.cnfにある. ただ, ~/.my.cnfは大抵ホームディレクトリのないmysqlというユーザーで実行するためあまり使わないと思う.
+
+<p> ループバックのみListenするようにする. (デフォルトでは全てlistenしている) /etc/my.cnf.d/server.cnfを次のように変える.
+
+<pre>
+<code>
+[mysqld]
+bind-address = 127.0.0.1
+</code>
+</pre>
+
+<h1>SQLでの操作</h1>
+<p> SQLを始めるにはいきなりデータベースの操作をする前にユーザー作成, 権限の設定など様々な操作を慣れ親しむ必要がある. SQLも一つの環境なので当然のことだが.
+
+<p> SQLではデータベースのデータだけではなく, データベース自体の情報をクエリすることができる. 基本的に特別な権限を与えない限りはrootユーザーのみでしかクエリする権限がないことに注意しよう.
+
+<h2>ユーザーの操作</h2>
+<p> ユーザーの一覧を取得
+<pre>
+<code>
+SELECT user, host FROM mysql.user;
+</code>
+</pre>
+
+<p> ユーザー生成の情報を取得
+
+<pre>
+<code>
+MariaDB&gt SHOW CREATE USER monty@localhost;
+</code>
+</pre>
+<p> ユーザーの権限の情報を取得
+<pre>
+<code>
+MariaDB&gt SHOW GRANTS FOR monty@localhost;
+
+</code>
+</pre>
+<p> ユーザーのパスワード変更
+
+<pre>
+<code>
+MariaDB&gt ALTER USER monty@localhost IDENTIFIED BY 'another_pass';
+</code>
+</pre>
+
+<p> ユーザー名を変更する
+<pre>
+<code>
+MariaDB&gt RENAME monty@localhost TO mona@localhost;
+</code>
+</pre>
+<p> ユーザーを削除する
+<pre>
+<code>
+MariaDB&gt DROP USER monty@localhost;
+</code>
+</pre>
+
+<p> ユーザーに権限を設定する <a href="https://www.dbonline.jp/mysql/user/index6.html">ユーザーに権限を設定する(GRANT文)</a> が参考になる.
+MariaDB&gt GRANT ALL PRIVILEGES ON somedb.* TO monty@localhost
+<p> 権限を削除するには, GRANTをREVOKE, TOをFROMに変えれば良い.
+
+<h2>データベースの操作</h2>
+<p> データベースを作成する
+<pre>
+<code>
+MariaDB&gt CREATE DATABASE mydb;
+</code>
+</pre>
+
+<p> データベース一覧取得
+
+<pre>
+<code>
+MariaDB&gt SHOW DATABASES;
+</code>
+</pre>
+<p> データベース作成時の情報取得
+
+<pre>
+<code>
+MariaDB&gt SHOW CREATE DATABASE mydb;
+</code>
+</pre>
+
+<p> どのデータベースを操作するのかをUSEで指定する.
+
+<pre>
+<code>
+MariaDB&gt USE mydb;
+</code>
+</pre>
+
+<p> テーブルを作成
+
+<pre>
+<code>
+MariaDB&gt CREATE TABLE test;
+</code>
+</pre>
+
+<p> 現在使用中のデータベースを確認
+
+<pre>
+<code>
+MariaDB&gt SELECT database();
+</code>
+</pre>
+
+<p> 使用するデータベースの指定は次でもできる
+
+<pre>
+<code>
+mysql -u root -p mydb
+</code>
+</pre>
+
+<h2>テーブルの操作</h2>
+<p> データベースにテーブルを作成する
+
+<pre>
+<code>
+MariaDB&gt CREATE TABLE mydb.tbl;
+</code>
+</pre>
+
+<p> USEで使用しているデータベースにテーブルを作成する
+<pre>
+<code>
+MariaDB&gt CREATE TABLE tbl;
+</code>
+</pre>
+
+<p> テーブルの一覧を取得
+<pre>
+<code>
+MariaDB&gt SHOW TABLES FROM mydb;
+</code>
+</pre>
+
+<p> テーブルのデフォルトストレージエンジンを指定してテーブルを作成する
+<pre>
+<code>
+MariaDB&gt CREATE TABLE SALES (shiten int, sales int) ENGINE MyISAM;
+</code>
+</pre>
+
+<p> テーブルを削除する
+<pre>
+<code>
+MariaDB&gt DROP TABLE tbl
+</code>
+</pre>
+
+<p> テーブルにデータを追加する. 文字列は必ず''で囲む必要がなく, アルファベット数字だけで空白なしというような単純な場合はなくてもOK. まとめて入れることも可能
+<pre>
+<code>
+MariaDB&gt CREATE TABLE usr (id int, name varchar(10), age int)
+MariaDB&gt INSERT INTO usr (1, 'Hanada', 39)
+MariaDB&gt INSERT INTO usr (2, Ishimi, 35), (3, Huruta, 29)
+</code>
+</pre>
+
+<pre>
+<code>
+MariaDB&gt UPDATE usr SET id=id-1 WHERE id &gt= 100
+</code>
+</pre>
+
+<p> Columnの一覧取得.
+<pre>
+<code>
+MariaDB&gt SHOW COLUMNS FROM usr;
+</code>
+</pre>
+
+<h2>テーブルの構造を変える</h2>
+<p> テーブル名を変更する.
+<pre>
+<code>
+MariaDB&gt ALTER TABLE tbl RENAME TO tbl2
+</code>
+</pre>
+
+<p> Columnを追加する. 
+<pre>
+<code>
+MariaDB&gt ALTER TABLE usr ADD mail varchar(20);
+</code>
+</pre>
+
+<p> Columnを削除する.
+<pre>
+<code>
+MariaDB&gt ALTER TABLE usr DROP mail;
+</code>
+</pre>
+
+<p> Column名を変更する.
+<pre>
+<code>
+MariaDB&gt ALTER TABLE tbl RENAME mail TO email;
+</code>
+</pre>
+
+<p> Columnの型を変更する.
+<pre>
+<code>
+MariaDB&gt ALTER TABLE tbl MODIFY mail varchar(20)
+</code>
+</pre>
+</body>
+</html>

@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>vimの正規表現</title>
+<meta http-equive="content-type" charset="utf-8">
+<link rel="icon" href="/img/favicon.ico">
+<link rel="stylesheet" href="/css/simple.css">
+</head>
+<body>
+<p><a href="./">戻る</a>
+<h1>vimの正規表現</h1>
+<p> Aug 27, 2020
+<p> vimにおいて置換はよく使う機能の一つだが, 高度な置換には正規表現が必須だ. しかしながらvimの正規表現は独特なのが厄介だ. これははっきり言って欠陥なのだが, \v(Very Magic)を利用することでいつもの正規表現を使うことができる. 検索時に /ではなく/\vで始める. (\vの直後に空白は入れない, 正規表現a+bで検索したければ/\va+bというように) :help magicで\vの他にも正規表現のモードが色々ある. いちいち/\vと入力するのも面倒なので次のようにして/を入力するだけで/\vとなるようにするのも良い.
+
+<pre>
+<code>
+nnoremap / /\v
+</code>
+</pre>
+
+<p> 例えば次のようなデータを空白区切りではなくカンマ区切りにしたいとする.
+<pre>
+<code>
+num song table header voices
+1  title  164e14  19b534  1632d0
+2  compony 164e1c 19bafc 1632d0
+3 central  164e24 19cd60 1632d0
+4 myroom 164e2c  19d3bc 1632d0
+5 saiba 164e34 19df64  1632d0
+6 seaside 164e3c 19edac 1632d0
+7 skytown 164e44 1a0048 1632d0
+8 greentown 164e4c 1a08a0 1632d0
+9 graveyard 164e54 1a1050 1632d0
+10 weatherkun 164e5c 1a2064 1632d0
+11 conspiracy 164e64 1a2554 1632d0
+12 occurence 164e6c 1a2c34 1632d0
+</code>
+</pre>
+<p>次の正規表現で置換する:
+<pre>
+<code>
+:%s/\v(\w+)\s+(\w+)\s+(\w+)\s+(\w+)+\s+(\w+)+/\1,\2,\3,\4,\5/
+</code>
+</pre>
+<p> ()はグルーピング, \sは空白文字(タブ, スペースなど), \wは英数字とアンダースコア(_), +は1回以上繰り返しの意味であり, \1は1番目の()にマッチングした文字列を抽出する, \2は2番目. \sに+をつけることで空白の長さが不規則でも綺麗にマッチングできる.
+
+<pre>
+<code>
+num,song,table,header,voices
+1,title,164e14,19b534,1632d0
+2,compony,164e1c,19bafc,1632d0
+3,central,164e24,19cd60,1632d0
+4,myroom,164e2c,19d3bc,1632d0
+5,saiba,164e34,19df64,1632d0
+6,seaside,164e3c,19edac,1632d0
+7,skytown,164e44,1a0048,1632d0
+8,greentown,164e4c,1a08a0,1632d0
+9,graveyard,164e54,1a1050,1632d0
+10,weatherkun,164e5c,1a2064,1632d0
+11,conspiracy,164e64,1a2554,1632d0
+12,occurence,164e6c,1a2c34,1632d0
+</code>
+</pre>
+</body>
+</html>

@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>systemd解説</title>
+<meta http-equive="content-type" charset="utf-8">
+<link rel="icon" href="/img/favicon.ico">
+<link rel="stylesheet" href="/css/simple.css">
+</head>
+<body>
+<p><a href="./">戻る</a>
+<h1>systemd解説</h1>
+<p> Jan 5, 2021
+<p> ssytemdのservice, timerについてなど.
+
+<h2>サービス作成</h2>
+<p> デーモンを作成する場合は, 次のように作成する. ここでは/var/www/test.binを実行するとする. デーモンでは実行ユーザーを指定したい場合が多いが, Userで指定できる. サーバーが再起動したらデーモンも起動して欲しい時はRestartを使う.
+<pre>
+<code>
+[Unit]
+Description=systemd daemon test
+
+[Service]
+User = http
+ExecStart = /var/www/test.bin
+Type=simple
+Restart = always
+
+[Install]
+WantedBy=multi-user.target
+</code>
+</pre>
+
+<p> 作成したら, enableで自動起動に登録, startで開始.
+
+<pre>
+<code>
+sudo systemctl enable test
+sudo systemctl start test 
+</code>
+</pre>
+<h2>タイマー作成</h2>
+<p> systemdはcrontabと違って.serviceとは別に.timerも作らなくてはならない. ここがやや不評な理由になっているがメリットもあるらしい. 
+<p> まず, serviceを作る. Typeをoneshotにすること.
+<pre>
+<code>
+[Unit]
+Description = systemd test
+
+[Service]
+Type=oneshot
+ExecStart = /usr/bin/bash /home/zaief/test.bin
+User=http
+
+[Install]
+WantedBy = multi-user.target
+</code>
+</pre>
+<p> enableのみ実行する.
+<pre>
+<code>
+sudo systemctl enable test
+</code>
+</pre>
+
+<p>/etc/systemd/systemにtest.timerを作成し次のように記述する. OnCalendarの書式は, 西暦-月-日 時:分:秒の順に当てはまる数字を書く. *とすると毎ということになる. 下記の内容の場合, 毎年, 毎月1日に実行することになる. 00:00:00は0時0分0秒に実行する, ということだ.  Persistent=trueでサービス起動後から, 指定した時間にシャットダウン状態などで実行できなかった場合起動後すぐ実行する.
+<pre>
+<code>
+[Unit]
+Description=Once a month renewal of Let's  Encrypt's certificates
+
+[Timer]
+OnCalendar=*-*-01 00:00:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+</code>
+</pre>
+<p> timerをenable, startする. 
+<pre>
+<code>
+systemctl enable /etc/systemd/system/test.timer
+systemctl start /etc/systemd/system/test.timer
+</code>
+</pre>
+<p> OnCalenderは日付指定によるタイマーだったが, 間隔指定ならばOnUnitActiveSecを使う. 次のように設定すると1時間に一回実行する.
+<pre>
+<code>
+[Timer]
+OnUnitAcxtiveSec=1h
+Persistent=true
+</code>
+</pre>
+
+<p> ログは, journalctlを使って確認できる.
+<pre>
+<code>
+journalctl -f -u test.service
+</code>
+</pre>
+
+<p> <a href="https://wiki.archlinux.jp/index.php/Systemd/タイマー">https://wiki.archlinux.jp/index.php/Systemd/タイマー</a>
+<p> <a href="https://qiita.com/ch7821/items/369090459769c603bb6b">systemd サービスユニット覚書</a> とても詳しい.
+</body>
+</html>

@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>sshの設定</title>
+<meta http-equive="content-type" charset="utf-8">
+<link rel="icon" href="/img/favicon.ico">
+<link rel="stylesheet" href="/css/simple.css">
+</head>
+<body>
+<p><a href="./">戻る</a>
+<h1>sshの設定</h1>
+<p> Jan 28, 2020
+<p> サーバーを構築するはじめとしてssh接続の設定をする必要がある. サーバーを扱うということはセキュリティにより気をつけなくてはならない. ローカルの環境にopensshが入っていることを確認すること. 大抵元から入っているので必要はないが, windowsなどでは環境によっては新しく導入しなくてはならないが, windowsの環境は多種多様なので各自好きな端末環境を整備すること. 流れとしては, サーバー側の設定でsshログインを許可する. そのあとにローカルで鍵のペアを生成し公開鍵をサーバーへ渡す. サーバー側の設定でssh鍵認証のみを許可し, パスワード認証を禁止する, これによってセキュリティを上げる.
+<p>ローカルでの作業かサーバーの作業かを明白にするために, この解説ではローカルでの作業はプロンプトとしてlocal$, サーバーでの作業ではプロンプトとしてserver$として表す.
+<h2>sshログインを許可</h2>
+<p> サーバー側に入ったら, sshの設定を次のように変更する.
+<pre>
+<code>
+server$ sudo vi /etc/ssh/sshd_config
+# ファイルを次のように設定する (コメントアウトする) viの使い方は知っているものとする
+RSAAuthentification yes
+PubkeyAuthentification yes
+AuthorizedKeyFile .ssh/authorized_keys
+server$ sudo systemctl restart sshd
+</code>
+</pre>
+<p> ssh_configとsshd_configがあるがsshdのdはデーモンと言う意味で, ssh_configは他のサーバーにsshで接続する設定, sshd_configは他のサーバーからsshで接続されるときの設定を表す. ここではサーバーはssh接続される側だったのでsshd_configを設定したのだった.  設定し終わったら, sshのデーモンを再起動しなくてはならない. arch linuxではsystemdをイニットシステムとして使っているのでsystemctl restart sshdでsshデーモンを再起動する.
+<pre>
+<code>
+# サーバーで~/.sshを作成
+server$ cd ~/
+server$ cd mkdir .ssh
+server$ chmod 700 .ssh
+</code>
+</pre>
+<h2>ssh鍵を生成</h2>
+<p> ssh鍵は必ずローカルで生成し, 秘密鍵と公開鍵のペアを作る. このうち公開鍵をサーバーへ渡す. 公開鍵暗号と言うのがよく聞く言葉だが, あまり暗号と言う言葉に捉われるべきではない. 仕組みとしてはユーザーが秘密鍵によって署名を生成する. その署名をサーバーに渡した公開鍵で検証して正規のユーザーであることを検証する. ここで重要なのは署名は秘密鍵を持っているユーザーしか生成できないので秘密鍵を持っていない別のユーザーがその公開鍵に対応した署名は作れないと言うことだ. そういう意味で秘密鍵を署名鍵, 公開鍵を検証鍵と呼んだ方が実情に合っている. パスワード認証とは全く仕組みが異なる.
+<p> さて, まずローカルで鍵を生成する. 
+<pre>
+<code>
+# ローカルで~/.sshを作成
+local$ cd ~/
+local$ mkdir .ssh
+local$ chmod 700 .ssh
+# ローカルで鍵を作成
+lcao$ cd .ssh
+local$ ssh-keygen -t rsa -b 2048
+Enter file in which to save the key: myserver_rsa
+Enter passphrase:
+Enter same passphrase again:
+
+local$ chmod 600 myserver_rsa.pub
+</code>
+</pre>
+<p> rsaの2048bitが今まで標準的な方法だったが現在は計算機が高性能になり4096bitにした方がいいとかそもそもrsaでなく楕円曲線暗号のecdsaを使った方がいいとか色々な意見がある. それについては後で解説している.
+<p> 
+<p> この操作によってmyserver_rsa(秘密鍵)とmyserver_rsa.pub(公開鍵)が生成される. 公開鍵をscpコマンドによってサーバーに転送する.
+<pre>
+<code>
+# 例えばサーバーのIPアドレスが201:304:108:309でサーバーでのユーザー名前がyamadaなら次のようにする
+# 309の後にも:があることに注意する. このコマンドを打つとyamadaのパスワードを聞かれるのでそれを入力する
+local$ scp myserver_rsa.pub yamada@201:304:108:309:~/.ssh/
+# サーバー側では公開鍵をauthorized_keysというファイルで管理する
+server$ mv myserver_rsa.pub authorized_keys
+server$ chmod 600 authorized_keys
+</code>
+</pre>
+<h2>ssh鍵によるssh接続</h2>
+<p> ssh鍵によるssh接続をするために, ローカル側で~/.sshフォルダにconfigファイルを作成しそこに設定を次のように書き込む. 
+<pre>
+<code>
+Host myserver
+  HostName 201:304:108:309 # ここは自分のサーバーのIPアドレスを入力する
+  User yamada              # ここはサーバーでのユーザー名を入力する
+  IdentityFile ~/.ssh/myserver_rsa # 秘密鍵の場所
+</code>
+</pre>
+<p> パスワードによるssh接続を禁止する.
+<pre>
+<code>
+server$ sudo vi /etc/ssh/sshd_config
+# ファイルを次のように設定する 
+PasswordAuthentification no
+server$ sudo systemctl restart sshd
+</code>
+</pre>
+<p> ここでssh接続の設定がミスっているとssh接続ができなくなって大変なので, また別の端末を開いてssh鍵による接続ができるかどうかを確認する.
+<pre>
+<code>
+local$ ssh myserver
+</code>
+</pre>
+<p> ssh鍵を生成したときのpassphraseを入力する. これでうまくいっていなければもう一度設定を見直そう.
+<h2>ポート番号の変更</h2>
+<p> ssh接続でデフォルトの22番ポートを使うのはセキュリティの面であまり良くないので, 別のポートで接続するように設定する. サーバー側のsshd_configの設定を例えば次のように変更する.
+<pre>
+<code>
+Port 55555
+</code>
+</pre>
+<p> ファイルの編集後はsshdを再起動することを忘れずに.
+<pre>
+<code>
+server$ sudo systemctl restart sshd
+</code>
+</pre>
+<p> ローカル側では, configファイルにポート番号の設定を付け足す.
+<pre>
+<code>
+Host myserver
+  HostName 201:304:108:309 
+  User yamada              
+  ControlMaster auto
+  ControlPersist 30
+  ControlPath ~/.ssh/ControlMaster-%r-%h.%p
+  IdentityFile  /.ssh/myserver_rsa
+  Port 55555
+</code>
+</pre>
+
+<p>configファイルを使わないならば次のようにポート番号を指定して接続する.
+<pre>
+<code>
+local$ ssh -p 55555 yamada@201:304:108:309
+</code>
+</pre>
+<h2>まとめ</h2>
+<p> sshの設定では権限を.sshフォルダは700, 鍵は600にすること. 
+<h2>ssh鍵の生成についての詳細</h2>
+<p>rsa方式の鍵は現在では実はあまり推奨されない, ビット長を長くしてもだ. 楕円曲線暗号のecdsaが有力候補だが, 長いビット長はまだ対応できていないサーバーもあるかもしれない. 特に古いサーバーなど. その場合は踏み台サーバーを用意して二段階接続をやる人もいるらしい(個人でやるには贅沢な気がするが).
+<p>ecdsa 256bitの場合:
+<pre>
+<code>
+ssh-keygen -t ecdsa -b 256
+</code>
+</pre>
+<p>ecdsa 384bitの場合, これはYubiKey 4で使えるビット長で次の記事がある. 物理的管理が結局一番安全だというのは同意見だ. yubiKeyを紛失するリスクよりも非物理的管理をする方がずっとリスクが高い. それとかっこよさの面でyubiKeyはいい. 
+<pre>
+<code>
+ssh-keygen -t ecdsa -b 384
+</code>
+</pre>
+<p>ecdsa 521bitの場合, 512bitの間違いではなく521で正しい
+<pre>
+<code>
+ssh-keygen -t ecdsa -b 521 -C "wnoguchi-mbp"
+</code>
+</pre>
+<p>Ed25519の場合, これが一番安全かもしれない
+<pre>
+<code>
+ssh-keygen -t ed25519 P "" -f serial-server.pem
+</code>
+</pre>
+<p> -C "コメント"で公開鍵の後ろにコメントがつく. どのユーザーの公開鍵かわからなくなってしまうので, つけた方がいいかもしれない. なぜかつけない例の方が多いが.
+<pre>
+<code>
+-C "mymachine"
+</code>
+</pre>
+<p> 鍵ペアのファイル名を指定する
+<pre>
+<code>
+-f awesome-key
+</code>
+</pre>
+<p> これによってawesome-key, awesome-key.pubができる
+<p> パスフレーズを削除したい
+<pre>
+<code>
+ssh-keygen -p -f ~/.ssh/id_ecdsa
+</code>
+</pre>
+<p> 公開鍵を秘密鍵から生成する
+<pre>
+<code>
+ssh-keygen -yf id_ecdsa
+</code>
+</pre>
+</body>
+</html>

@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>モジュールとパッケージの仕組み</title>
+<meta http-equive="content-type" charset="utf-8">
+<link rel="stylesheet" href="/css/hljs.css">
+<link rel="icon" href="/img/favicon.ico">
+</head>
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/tomorrow-night-blue.min.css">
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/highlight.min.js"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+<body>
+<p><a href="./">戻る</a>
+<h1>モジュールとパッケージの仕組み</h1>
+<p> Oct 1, 2020
+<p> 公式サイトには <a href="https://golang.org/doc/code.html#Organization">How to Write Go Code</a> で各概念の説明があるが, Go言語は仕組みがコロコロ変わったりしてその名残があったりと実は煩雑な部分がある. まず, かつてはモジュールという概念はGoにはなくパッケージのみだった. 歴史的には <a href="https://qiita.com/yoshinori_hisakawa/items/268ba201611401ca7935">【Go言語】modulesについて理解するために過去から調べてみた</a> の記事で書かれているが, 従来のgo getではライブラリのバージョンとして1つしか選べず, プロジェクトごとにバージョンを指定できなかった. そのためvenderディレクトリをプロジェクトに配置しそこにライブラリをインストールするといった措置がなされたが, 同じバージョンでいいライブラリをプロジェクトごとにインストールするのは無駄が多い. そのためgo1.11からモジュールという仕組みが導入された. モジュールとはバージョン管理とパッケージ配布を統合的に行う仕組みである. go.modファイルにモジュールの情報を記述する. 具体的には必要なライブラリをバージョンも指定して記述できる. $GOPATH/pkg/mod にバージョンつきでライブラリが管理される.
+<p> まず, ライブラリを配布する側, 利用する側のプロジェクトそれぞれgo.modファイルの有無でどうなるか, ということを明確にしなければならないだろう. つまり, 4通りが考えられる. 多くの記事の説明ではこのことを考慮せず書いているせいでわかりにくい. 
+<p> 利用する側が
+<p> そもそもライブラリなのかバイナリなのか, そもそもそースビルド限定なのか, プリコンパイル済みなのか, おそらくソースビルド限定なのだろう.  goはコンパイルの仕組みがあるのでわかりにくい部分もある.
+<p> ソースビルドを行うタイミングはあるプロジェクトがimportでパッケージを利用してそのプロジェクトをビルドする時であり, パッケージが違えばビルドされない.
+<p> Goは静的リンクで, つまりバイナリにはライブラリも一緒に含むため巨大になりがち.
+<p> <a href="https://qiita.com/sonatard/items/7b9b376f3420879a00d6">Go Binary Hacks - go buildせずにビルドする #golang</a> によるとGoはパッケージ内では同時にコンパイルされるため, 差分コンパイルの仕組みがない. 簡潔な仕組みとなっている.
+
+<p> go help install などgo helpコマンドで説明を見ることができる. 
+<p> go help install の場合:
+<pre>
+<code>
+usage: go install [-i] [build flags] [packages]
+
+Install compiles and installs the packages named by the import paths.
+
+Executables are installed in the directory named by the GOBIN environment
+variable, which defaults to $GOPATH/bin or $HOME/go/bin if the GOPATH
+environment variable is not set. Executables in $GOROOT
+are installed in $GOROOT/bin or $GOTOOLDIR instead of $GOBIN.
+
+When module-aware mode is disabled, other packages are installed in the
+directory $GOPATH/pkg/$GOOS_$GOARCH. When module-aware mode is enabled,
+other packages are built and cached but not installed.
+
+The -i flag installs the dependencies of the named packages as well.
+
+For more about the build flags, see 'go help build'.
+For more about specifying packages, see 'go help packages'.
+
+See also: go build, go get, go clean.
+</code>
+</pre>
+</body>
+</html>

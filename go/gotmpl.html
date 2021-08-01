@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Goテンプレート解説</title>
+<meta http-equive="content-type" charset="utf-8">
+<link rel="stylesheet" href="/css/hljs.css">
+<link rel="icon" href="/img/favicon.ico">
+</head>
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/tomorrow-night-blue.min.css">
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/highlight.min.js"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+<body>
+<p><a href="./">戻る</a>
+<h1>Goテンプレート解説</h1>
+<p> Aug 28, 2020
+<p> Go言語ではtext/templateを使うことによってテンプレート処理を行うことができる. 一見手続き的に生成する方が直感的で楽だが, text/templateではより階層化され柔軟性に富んでおり, 雛形のテンプレートファイル側とデータ処理のコード側で役割を明確に分けている. 手続き型は雛形もコード中心に生成するため保守性が低くなりがちで, 同じコードを別の雛形にも書かなくてはならなかったりと無駄が多い. 
+<p> 今回はやや複雑な例になるがcsvのデータをhtmlのテーブルに変換する, ということを行う. csvの取り込みとテンプレート処理は別の記事に分けても良いが, テンプレートの解説記事はどのサイトもあまり実践からかけ離れており簡単すぎるのでこの内容にした. 
+<p> ある程度テンプレートを知っていることを前提で説明しているので簡単な記事を読んでおくこと:
+<br/><a href="https://qiita.com/hiro_nico/items/61a5ae7138c6918bc6b5">Go text/template で文字列作成</a> 
+<br/><a href="https://golang.hateblo.jp/entry/golang-text-html-template">https://golang.hateblo.jp/entry/golang-text-html-template</a>
+
+<p> 最終的には次のようなディレクトリ構成になる.
+<pre>
+<code>
+├── mmbn.go
+├── mmbn6grega_j_song.csv
+├── index.tmpl
+├── tablehead.tmpl
+└── tablerows.tmpl
+</code>
+</pre>
+
+<h3>mmbn6grega_j_song.csv</h3>
+<p> サンプルとして次のようなcsvファイルを用意した.
+<pre>
+<code>
+num,song,table,header,voices
+1,title,164e14,19b534,1632d0
+2,compony,164e1c,19bafc,1632d0
+3,central,164e24,19cd60,1632d0
+4,myroom,164e2c,19d3bc,1632d0
+5,saiba,164e34,19df64,1632d0
+6,seaside,164e3c,19edac,1632d0
+7,skytown,164e44,1a0048,1632d0
+8,greentown,164e4c,1a08a0,1632d0
+9,graveyard,164e54,1a1050,1632d0
+10,weatherkun,164e5c,1a2064,1632d0
+11,conspiracy,164e64,1a2554,1632d0
+12,occurence,164e6c,1a2c34,1632d0
+</code>
+</pre>
+
+<h3>index.tmpl</h3>
+<p> index.tmpl, tablehead.tmpl, tablerows.tmpl という3つのファイルを用意する. index.tmplが一番上の階層であり, 2つのテンプレートを呼び出している. 
+<pre>
+<code>
+{{- block "index" . -}}
+&lt!DOCTYPE HTML&gt
+&lthtml&gt
+&lthead&gt&lt/head&gt
+&ltbody&gt
+&lttable border&gt
+{{ template "tablehead" .header }}
+{{ template "tablerows" .rows }}
+&lt/table&gt
+&lt/body&gt
+&lt/html&gt
+{{ end -}}
+</code>
+</pre>
+<p> {{  }}の右や左に-がついているがこれは右や左の空白を除去して詰めるという意味だが, 基本的に感覚的に判断することになると思う. {{ block "index" . }}とは{{ define "index" }} ... {{ end }}と{{ template "index" . }} をまとめたもので, defineでテンプレートを実装し, {{ template "index" . }} で . はテンプレート実行関数で渡すデータの入力を表し, この入力によるindexテンプレートの実行結果が入る.今回は { header, rows } を渡している. headerはcsvの一行目の要素の配列, rowsはcsvの二行目以降の行, 行内の要素による二次元配列となる. indexテンプレートの中にtablehead, tablerowテンプレートが埋め込まれている. 今回それぞれにheader, rowsを渡している. このように, テンプレートを実行するとデータの一部を使ってさらにテンプレートを実行する, という例がとても重要であり, 階層化されている. このように構造的な設計を与えるメリットは簡単な例では享受できず, コードだけで記述する方が楽だとも思うだろう. よって今回はやや複雑な例とした.
+
+<h3>tablehead.tmpl</h3>
+<p> indexテンプレート内でtableheadテンプレートが実行されるが, 実際にテンプレートを定義する場所は別の場所になる. 
+<pre>
+<code>
+{{- define "tablehead" -}}
+&lttr&gt
+{{ range $index, $element := . -}}
+&ltth&gt{{- $element -}}&lt/th&gt
+{{ end -}}
+&lt/tr&gt
+{{ end -}}
+</code>
+</pre>
+<p> {{ define "tablehead" }} ... {{ end }} によってtableheadテンプレートを定義する. indexテンプレートはたまたまテンプレートを定義する場所と実行して埋め込みたい場所が同じだったためblockを使った. しかし今回はindex.tmpl内に埋め込むので定義する場所が別となるため, defineを使う. このように階層の一番上のルートではblock, その下の階層ではdefineを使うという流れが多い. 今更だがファイル名は関係なくなんでもいいが, 今回テンプレート名と同じ名前にしており, その方が大体わかりやすい. {{ range $index, $elem := . -}} ... {{ end }}では実行時に入力されるデータを渡しているが, . には indexテンプレートで .head を渡しているので実際には .headが入ることになる. rangeによって.headの要素数だけ&lttd&gt$element&lttd&gtが生成される. 
+
+<h3>tablerows.tmpl</h3>
+<pre>
+<code>
+{{- define "tablerows" -}}
+{{- range $i, $row := . -}}
+&lttr&gt
+{{ range $j, $elem := $row -}}
+&lttd&gt{{- $elem -}}&lt/td&gt
+{{ end -}}
+&lt/tr&gt
+{{ end -}}
+{{- end -}}
+</code>
+</pre>
+<p> この例はさらに二回rangeを回している. rowsは二次元配列だからこういうことになるが, 実際に例を見れば難しくはない. 
+
+<p> テンプレートを書いたのであとはgoでそれを入力するだけ. csvを取り込み, テンプレートを取り込み, テンプレートを実行する, という流れだ.
+<h3>mmbn.go</h3>
+<pre>
+<code>
+package main
+
+import (
+	"log"
+	"text/template"
+	"os"
+	"encoding/csv"
+	"io"
+)
+
+func main() {
+	file, err := os.Open("mmbn6grega_j_song.csv")
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
+
+	reader := csv.NewReader(file)
+
+
+	var header []string
+	var rows [][]string
+	if header, err = reader.Read(); err!= nil {
+		log.Fatal(err)
+	}
+	for {
+		line, err := reader.Read() 
+		if err == io.EOF { 
+			break 
+		} else if err != nil {
+			log.Fatal(err)
+		}
+		rows = append(rows,line)
+	}
+
+	t, err := template.New("").ParseGlob("*.tmpl")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	//outfile, err := os.Open("")
+	//defer file.Close()
+	data := map[string]interface{}{"header":header,"rows":rows,}
+	if err = t.ExecuteTemplate(os.Stdout, "index", data); err != nil {
+		log.Fatal(err)
+	}
+}
+</code>
+</pre>
+<p> csv.NewReader(file)ではcsvファイルを読み込んだReaderが返されるが, Read()では一行ずつ読み進め, []stringが返される. コンマで区切られた要素が[]stringの要素となる. 
+<p> template.ParseGlob("*.tmpl")では上で定義した3つのテンプレートファイルを読み込む. テンプレートファイルを読み込む順番はあまり関係ない. テンプレートはオブジェクト指向のような設計であり, 従来の手続き的なものではない.
+<p> t.ExecuteTemplate(os.Stdout, "index", data) では標準出力を出力先として, indexテンプレートにdataを渡して実行する. このように 一番上の階層のテンプレートさえ実行すればあとはどんどん展開される.
+
+<p>出力結果
+<pre>
+<code>
+
+&lt!DOCTYPE HTML&gt
+&lthtml&gt
+&lthead&gt&lt/head&gt
+&ltbody&gt
+&lttable border&gt
+&lttr&gt
+&ltth&gtnum&lt/th&gt
+&ltth&gtsong&lt/th&gt
+&ltth&gttable&lt/th&gt
+&ltth&gtheader&lt/th&gt
+&ltth&gtvoices&lt/th&gt
+&lt/tr&gt
+
+&lttr&gt
+&lttd&gt1&lt/td&gt
+&lttd&gttitle&lt/td&gt
+&lttd&gt164e14&lt/td&gt
+&lttd&gt19b534&lt/td&gt
+&lttd&gt1632d0&lt/td&gt
+&lt/tr&gt
+&lttr&gt
+&lttd&gt2&lt/td&gt
+&lttd&gtcompony&lt/td&gt
+&lttd&gt164e1c&lt/td&gt
+&lttd&gt19bafc&lt/td&gt
+&lttd&gt1632d0&lt/td&gt
+&lt/tr&gt
+&lttr&gt
+&lttd&gt3&lt/td&gt
+&lttd&gtcentral&lt/td&gt
+&lttd&gt164e24&lt/td&gt
+&lttd&gt19cd60&lt/td&gt
+&lttd&gt1632d0&lt/td&gt
+&lt/tr&gt
+&lttr&gt
+&lttd&gt4&lt/td&gt
+&lttd&gtmyroom&lt/td&gt
+&lttd&gt164e2c&lt/td&gt
+&lttd&gt19d3bc&lt/td&gt
+&lttd&gt1632d0&lt/td&gt
+&lt/tr&gt
+&lttr&gt
+&lttd&gt5&lt/td&gt
+&lttd&gtsaiba&lt/td&gt
+&lttd&gt164e34&lt/td&gt
+&lttd&gt19df64&lt/td&gt
+&lttd&gt1632d0&lt/td&gt
+&lt/tr&gt
+&lttr&gt
+&lttd&gt6&lt/td&gt
+&lttd&gtseaside&lt/td&gt
+&lttd&gt164e3c&lt/td&gt
+&lttd&gt19edac&lt/td&gt
+&lttd&gt1632d0&lt/td&gt
+&lt/tr&gt
+&lttr&gt
+&lttd&gt7&lt/td&gt
+&lttd&gtskytown&lt/td&gt
+&lttd&gt164e44&lt/td&gt
+&lttd&gt1a0048&lt/td&gt
+&lttd&gt1632d0&lt/td&gt
+&lt/tr&gt
+&lttr&gt
+&lttd&gt8&lt/td&gt
+&lttd&gtgreentown&lt/td&gt
+&lttd&gt164e4c&lt/td&gt
+&lttd&gt1a08a0&lt/td&gt
+&lttd&gt1632d0&lt/td&gt
+&lt/tr&gt
+&lttr&gt
+&lttd&gt9&lt/td&gt
+&lttd&gtgraveyard&lt/td&gt
+&lttd&gt164e54&lt/td&gt
+&lttd&gt1a1050&lt/td&gt
+&lttd&gt1632d0&lt/td&gt
+&lt/tr&gt
+&lttr&gt
+&lttd&gt10&lt/td&gt
+&lttd&gtweatherkun&lt/td&gt
+&lttd&gt164e5c&lt/td&gt
+&lttd&gt1a2064&lt/td&gt
+&lttd&gt1632d0&lt/td&gt
+&lt/tr&gt
+&lttr&gt
+&lttd&gt11&lt/td&gt
+&lttd&gtconspiracy&lt/td&gt
+&lttd&gt164e64&lt/td&gt
+&lttd&gt1a2554&lt/td&gt
+&lttd&gt1632d0&lt/td&gt
+&lt/tr&gt
+&lttr&gt
+&lttd&gt12&lt/td&gt
+&lttd&gtoccurence&lt/td&gt
+&lttd&gt164e6c&lt/td&gt
+&lttd&gt1a2c34&lt/td&gt
+&lttd&gt1632d0&lt/td&gt
+&lt/tr&gt
+
+&lt/table&gt
+&lt/body&gt
+&lt/html&gt
+</code>
+</pre>
+
+<p> 実際にテーブルをこのサイトで表示してみる: (cssはこのサイトのものをそのまま適用している) 
+
+<table border>
+<tr>
+<th>num</th>
+<th>song</th>
+<th>table</th>
+<th>header</th>
+<th>voices</th>
+</tr>
+
+<tr>
+<td>1</td>
+<td>title</td>
+<td>164e14</td>
+<td>19b534</td>
+<td>1632d0</td>
+</tr>
+<tr>
+<td>2</td>
+<td>compony</td>
+<td>164e1c</td>
+<td>19bafc</td>
+<td>1632d0</td>
+</tr>
+<tr>
+<td>3</td>
+<td>central</td>
+<td>164e24</td>
+<td>19cd60</td>
+<td>1632d0</td>
+</tr>
+<tr>
+<td>4</td>
+<td>myroom</td>
+<td>164e2c</td>
+<td>19d3bc</td>
+<td>1632d0</td>
+</tr>
+<tr>
+<td>5</td>
+<td>saiba</td>
+<td>164e34</td>
+<td>19df64</td>
+<td>1632d0</td>
+</tr>
+<tr>
+<td>6</td>
+<td>seaside</td>
+<td>164e3c</td>
+<td>19edac</td>
+<td>1632d0</td>
+</tr>
+<tr>
+<td>7</td>
+<td>skytown</td>
+<td>164e44</td>
+<td>1a0048</td>
+<td>1632d0</td>
+</tr>
+<tr>
+<td>8</td>
+<td>greentown</td>
+<td>164e4c</td>
+<td>1a08a0</td>
+<td>1632d0</td>
+</tr>
+<tr>
+<td>9</td>
+<td>graveyard</td>
+<td>164e54</td>
+<td>1a1050</td>
+<td>1632d0</td>
+</tr>
+<tr>
+<td>10</td>
+<td>weatherkun</td>
+<td>164e5c</td>
+<td>1a2064</td>
+<td>1632d0</td>
+</tr>
+<tr>
+<td>11</td>
+<td>conspiracy</td>
+<td>164e64</td>
+<td>1a2554</td>
+<td>1632d0</td>
+</tr>
+<tr>
+<td>12</td>
+<td>occurence</td>
+<td>164e6c</td>
+<td>1a2c34</td>
+<td>1632d0</td>
+</tr>
+</table>
+
+<p> このようにcsvからhtmlへ変換することができた. 実際にはcsvではなくデータベースを使うことが多いだろうが一度データを作ってしまえば同じようにできる. htmlに大量のデータを手打ち入力するのは, ありえない. csvからhtmlのテーブルを生成するツールはよく作られているかもしれないが, 埋め込むという作業を階層化された方法で自動化するのは難しいだろう. 
+</body>
+</html>

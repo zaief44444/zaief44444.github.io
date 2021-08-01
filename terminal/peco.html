@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>peco解説</title>
+<meta http-equive="content-type" charset="utf-8">
+<link rel="icon" href="/img/favicon.ico">
+<link rel="stylesheet" href="/css/simple.css">
+</head>
+<body>
+<p><a href="./">戻る</a>
+<h1>peco解説</h1>
+<p> July 17, 2020
+<p> pecoはzshの検索機能ツールである. 検索というのはコンピューター操作において最も基本的な操作であり, ブラウザの存在が検索の重要性を事実たらしめる. 当然, ターミナル上でも検索行為は可能だ. brew install peco でインストールできる. .zshrcに次を記述する.
+<pre>
+<code>
+function peco-history-selection() {
+    BUFFER=`history -n 1 | tail -r  | awk '!a[$0]++' | peco`
+    CURSOR=$#BUFFER
+    zle reset-prompt
+}
+
+zle -N peco-history-selection
+bindkey '^R' peco-history-selection
+</code>
+</pre>
+</body>
+</html>

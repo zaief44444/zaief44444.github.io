@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>CPU</title>
+<meta http-equive="content-type" charset="utf-8">
+<link rel="icon" href="/img/favicon.ico">
+<link rel="stylesheet" href="/css/simple.css">
+</head>
+
+<body>
+<p><a href="./">戻る</a>
+<h1>CPU</h1>
+<p> Oct 2, 2020
+<p> CPUは2A03(RP2A03[G])であり, 6502をベースとして機能をいくつか削りつつオーディオ生成機能を載せたものだ. $4000-$4013, $4015, $4018-$401Fがオーディオのレジスタ.
+<h2>メモリマップ</h2>
+<table border>
+  <tr>
+    <th>Address</th>
+    <th>内容</th>
+  </tr>
+  <tr>
+    <td>$0000-$00FF</td>
+    <td>Zero Page</td>
+  </tr>
+  <tr>
+    <td>$0100-$01FF</td>
+    <td>Stack</td>
+  </tr>
+  <tr>
+    <td>$0200-$07FF</td>
+    <td>RAM</td>
+  </tr>
+  <tr>
+    <td>$0800-$1FFF</td>
+    <td>Mirrors $0000-$07FF</td>
+  </tr>
+  <tr>
+    <td>$2000-$2007</td>
+    <td>I/O Registers</td>
+  </tr>
+  <tr>
+    <td>$2008-$3FFF</td>
+    <td>Mirrors $2000-$2007</td>
+  </tr>
+  <tr>
+    <td>$4000-$401F</td>
+    <td>I/O Registers</td>
+  </tr>
+  <tr>
+    <td>$4020-$5FFF</td>
+    <td>Expansion ROM</td>
+  </tr>
+  <tr>
+    <td>$6000-$7FFF</td>
+    <td>SRAM</td>
+  </tr>
+  <tr>
+    <td>$8000-$BFFF</td>
+    <td>PRG-ROM Lower Bank</td>
+  </tr>
+  <tr>
+    <td>$C000-$FFFF</td>
+    <td>PRG-ROM Upper Bank</td>
+  </tr>
+</table>
+
+<h2>命令</h2>
+<p> <a href="http://obelisk.me.uk/6502/reference.html">http://obelisk.me.uk/6502/reference.html</a> 
+<p> <a href="http://taotao54321.hatenablog.com/entry/2017/04/09/151355">NES 基礎知識 - CPU</a> がとてもわかりやすい.
+<p> いくつかの命令を説明する. JSR実行前のPCはJSRオペランドの次のアドレスを指しているが, pushされるのはPC-1であることに注意する. つまり帰還点の1つ前のアドレスを指すことになる.
+<p> シフトは4つ, ASL(Arithmetic Shift Left), LSR(Logical Shift Right), ROL(Rotational Shift Left), ROR(Rotational Shift Right)であるが, ASLは2倍演算, 7bitが1ならばCが1となる. LSRは2で割る演算で余りがCに格納される. ROL, RORはCフラグも含めたシフト演算.
+<p> RTI(Return from Interrupt)ではRTS(Return from Subroutine)と違い帰還点のアドレスをpullする. RTSではpullしたアドレスをさらに+1しなくてはならない.
+<p> SBCではCが0のときborrowしていると考える, つまりCが1のときは通常の減算であり, 0のときはborrowしている分もひく. これは, 複数バイトの演算で役に立ち, low byteのSBCでborrowが発生した時にCフラグが1となるので, hi byteでborrowの分を引くことができ2byteの引き算ができる.
+<p> ADC signed resultが不正の時にVフラグが立つ. 例えば0x80+0x80で0x00になった時など. 同じ符号で足しているのにもかかわらず結果が違う符号になるという時に立てれば良い.
+<p> SBC も, 符号が違うもの同士の引き算で結果が引かれる側の符号と異なる時に立てればいいはず
+<h2>レジスタ</h2>
+<p> PはステータスレジスタでNV.BDIZC というビットフラグを表している.
+<p> VはOverflow. 
+<h2>スタック</h2>
+<p> SP(Stack Pointer)は$0100-$01FFのスタック領域のポインターであり, 1byteで$0100からのオフセットを表す. 後ろから前の方向に積み重なっていく. 通常スタックといえばポインターが指す場所の解釈は2通りあり, full stackとempty stackだ. full stack はポインターはスタックの一番先頭の保存場所を指し, push時にポインターを進めてから書き込む, という動きをする. empty stackはスタックの保存場所の直前を指し, push時に書き込んでからポインターが動くという動作となる. イメージ的にはfullは既に値が埋まっており, emptyは空いていて値を入れられる場所を指すということだ. 6502や65816ではemptyだ. reset時は0xFFにするのが普通だが, <a href="https://github.com/fogleman/nes/blob/master/nes/cpu.go">https://github.com/fogleman/nes/blob/master/nes/cpu.go</a> のようにエミュレーターによっては0xFDにしたりしているがこの理由を調査したい, 単純ミスかもしれないが. 256byte埋まった瞬間ポインターは0xFFとなり, つまり$01FFを指すようになる. スタック領域でも, lo, hiの順に並んでいる.
+
+<h2>バグ(仕様)</h2>
+<p> CPUにはバグがあり, 0x??FFのアドレスを参照して2byte取得すると, low部分は0x??FFだが, hi部分は0x?(?+1)00ではなく0x??00を参照してしまう, つまり0x100分戻った場所を参照してしまう. 
+</body>
+</html>

@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>OpenGL3.3の仕様を読む</title>
+<meta http-equive="content-type" charset="utf-8">
+<link rel="stylesheet" href="/css/hljs.css">
+<link rel="icon" href="/img/favicon.ico">
+</head>
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/tomorrow-night-blue.min.css">
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/highlight.min.js"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+<body>
+<p><a href="./">戻る</a>
+<h1>OpenGL3.3の仕様を読む</h1>
+<p> Sep 1,2020
+<p> OpenGLの最新バージョンは4以上だが, OpenGL3.3では既に現代的なプログラマシェーダーによる方法を進めており, かつての固定シェーダーによる方法ではない. 3と4の違いは機能がいくつか追加されたことだけなので3.3の仕様が読めれば十分に役に立つ. 
+<p> OpenGLはステートマシーンである, というのが重要である. frame bufferは描画面, contextは描画面の状態であるがこれらはOS側が設定する物であり, GL側にはframe bufferやcontextを初期化する, という操作はない. GLがやることは命令に応じてframe bufferをある状態からある状態へ変える, ということだけだ. frame bufferはdefaultのものが用意されていることが多いが, defaultのものは使わず, frame buffer objectを生成して使うことが多い. 
+<p> 仕様書では gl(Cライブラリ)のように定数や型にGL_やGLをつけることなくそのままの名前で説明している.
+<p> 7ページから12ページまではfloating pointでの計算の仕様を決めている. これはGPUベンダー側が考える話なので必要ない. 
+<h2>2.2 GL State</h2>
+<p> GL server stateとGL client stateに分けられる. ほとんどは前者, gl contextはserver state
+<h3>2.3 GL Command Syntax</h3>
+<p> GLの命令には命名規則があり, これによって引数や返り値を考えることができる. 4という数字は引数の数, fはflaot型というように. vはベクトル値であり, つまりポインター型を指すことになる. 
+<pre>
+<code>
+void Uniform4f(int location, float v0, float v1, float v2, float v3);
+void Uniform1i(int location, int value);
+void GetFloatv(enum value, float *data)
+</code>
+</pre>
+<p> コマンドの流れ, rastelization, fragment shader, ...
+<h2>2.5 GL Errors</h2>
+<p> GetError()で最初に起きたエラーを取得できる. NO_ERRORなら正常. INVALID_ENUM, INVALID_VALUE, INVALID_OPERATION, INVALID_FRAMEBUFFER_OPERATION, OUT_OF_MEMORY
+<pre>
+<code>
+enum GetError();
+</code>
+</pre>
+<h2>2.6 Primitives and Vertices</h2>
+<p> primitiveとは点, 線分, 多角形のこと. DrawArraysなどの命令で生成される. Primitive Typeとして, POINTS, LINE_STRIP, LINE_LOOP, LINESがある. LINE_STRIPは線をどんどんつなげていくもので, i個の点ならi-1個の辺ができる. LINE_LOOPは最後の点と最初の点もつなげるので閉じる. LINESは1,2番目を線で結び, 3,4番目を線で結び, ...を繰り返す. 2n個の頂点に対しn個の辺ができる. 奇数個の場合は最後の頂点は無視される.
+<p> TRIANGLE_STRIP はi-2,i-1番目の頂点をi番目の頂点に結ぶ, ということを繰り返す. 2番目を1番目に結ぶ(-1番目はないので一つだけしか結ばない) 3番目を1,2番目に結ぶ, 4番目を2,3番目に結ぶ,...
+<p> TRIANGLE_FANはTRIANGLE_STRIPの説明のi-2を1に変えたものであり, 1が中心の扇型のような図形となる.
+<p> TRIANGLESはLINESの場合の三角形バージョンで, 3n個の頂点に対して3k-2,3k-1,3k番目の頂点で三角形を為す.
+<p> LINES_ADJACENCY, LINE_STRIP_ADJACENCY, TRIANGLES_ADJACENCY, TRIANGLE_STRIP_ADJACENCY
+<h2>2.7 Vertex Specification</h2>
+<p> 頂点はindexによって識別され, 座標によって識別するわけではない. 頂点に対して, 座標(x,y,z,w)を与えることができる. 4つの要素を全て与えなくても, 例えばVertexAttrib2ならx, yを指定した値, z=0,w=1となる. 
+<pre>
+<code>
+void VertexAttrib{1234}{sfd}(uint index, T values)
+void VertexAttribP{1234}ui(uint index, enum type, boolean normalized, uint value)
+</code>
+</pre>
+<p> packed dataについては後で解説.
+<h2>2.8 Vertex Arrays</h2>
+<p>次の命令で頂点配列に対する属性を設定. sizeは1,2,3,4のいずれか, typeはBYTE,SHORT,INT,FLOAT,HALF_FLOAT,DOUBLEのいずれか. UNSIGNED_BYTE,UNSIgNED_SHORT,UNSIGNED_INT
+使える. INT_2_10_10_10_-REV, UNSIGNED_INT_10_100_10_0_REV, 4signed, 4 unsigned elements packed
+<pre>
+<code>
+void VertexAttribPointer(uint index, int size, enum type, boolean normalized, sizei stride, const void* pointer);
+void VertexAttribIPointer(uint index, int size, enum type, sizei stride, const void *pointer);
+</code>
+</pre>
+
+<pre>
+<code>
+void EnableVertexAttribArray(uint index);
+void DisableVertexAttribArray(uint index);
+</code>
+</pre>
+<p> DrawArrays, DrawElements, Draw*命令によって array element iはGLに送られる. void Enable(enum target); void Disable(enum target);のtargetをPRIMITIVE_RESTARTにすることでprimitiveの再起動を有効, 無効にする. void PrimitiveRestartIndex(uint index); を使うことで
+<p> pack dataのINT_2_10_10_10_REVはw,x,y,zのそれぞれのbit数.
+<p> void DrawArraysOneInstance(enum mode, int first, sizei count, int instance); 命令はGLにはないが, primitiveの列を生成する. firstからfirst + count -1まで. modeでPRIMITIVE type指定. void DrawArrays(enum mode, int first, sizei count); はDrawArraysOneInstance(mode, first, count, 0);に等しい. instanceはvertex shaderでgl_InstanceIDとして読み込まれる. void DrawArraysInstanced(enum mode, int first, sizei count, sizei primcount)
+
+<pre>
+<code>
+void DrawArraysInstanced(enum mode, int first, sizei count, sizei primcount) {
+  if (mode or count is invalid)
+    generate appropriate error
+  else {
+    for (i = 0; i &lt primcount; i++) {
+        instanceID = i;
+        DrawArraysOneInstance(mode, first, count, i)
+      }
+  }
+}
+</code>
+</pre>
+<pre>
+<code>
+void MultiDrawArrays(enum mode, const int *first, const sizei *count, sizei primcount) {
+  if (mode is invalid)
+    generate appropriate error
+  else {
+    for (i = 0; i &lt primcount; i++) {
+      if (count[i] &gt 0)
+        DrawArraysOneInstance(mode, first[i], count[i], 0);
+    }
+  }
+}
+</code>
+</pre>
+
+<p> void DrawElementsOneInstance(enum mode, sizei count, enum type, const void *indices, uint instance); はGLにない命令だが, バインドされているarray bufferのcount長さのindicesに含まれるindexに対して描画. DrawElements(mode, count, type, indices);はDrawElementsOneInstance(mode, count, type, indices, 0)に等しい
+
+<pre>
+<code>
+void DrawElementsInstanced(enum mode, sizei count, enum type, const void *indices, sizei primcount) {
+  if (mode, count, or type is invalid)
+    generate appropriate error
+  else {
+    for (int i = 0; i &lt primcount; i++) {
+      instanceID = i;
+      DrawElementsOneInstance(mode, count, type, indices, i);
+  }
+  instanceID = 0;
+  }
+}
+</code>
+</pre>
+
+
+<pre>
+<code>
+void MultiDrawElements( enum mode, const sizei *count, enum type, const void **indices, sizei primcount ) {
+  if (mode, count, or type is invalid)
+    generate appropriate error
+  else {
+    for (int i = 0; i &lt primcount; i++)
+      DrawElementsOneInstance(mode, count[i], type, indices[i], 0);
+  }
+}
+</code>
+</pre>
+
+<h2>2.9 Buffer Objects</h2>
+<p> vertex array dataはGLのbuffer object上で操作される. void GenBuffers(sizei n, uint *buffers); でn個のbuffer idを*buffersに格納する. buffer objectはuintのidで識別されるのであった. 同様に, void DeleteBuffers(sizei n, const uint *buffers)で消去.
+<p> void BindBuffer(enum target, uint buffer); によって初めてbuffer objectが生成される. GenBuffersではidを発行しただけで実際にstateを持つオブジェクトではない. buffer objectがdeleteされると, そのbuffer objectとバインドしているターゲット全ては0にバインドされる. 一つのbuffer objectはいくつものtargetにバインドできる. 
+<p> void BindBufferRange(enum target, uint index, uint buffer, intptr offset, sizeiptr size); void BindBufferBase(enum target, uint index, uint buffer);  targetはTRANSFORM_FEEDBACK_BUFFER or UNIFORM_BUFFER. offsetはbufferのoffset, sizeはoffsetからbindする領域のsize. BindBufferBaseはoffset=0, size = bufferのサイズとして適用したもの.
+
+<table border>
+  <tr>
+    <th>Target name</th>
+    <th>Purpose</th>
+  </tr>
+  <tr>
+    <td>ARRAY_BUFFERS</td>
+    <td>Vertex attributes</td>
+  </tr>
+  <tr>
+    <td>COPY_READ_BUFFER</td>
+    <td>Buffer copy source</td>
+  </tr>
+  <tr>
+    <td>COPY_WRITE_BUFFER</td>
+    <td>Buffer copy destination</td>
+  </tr>
+  <tr>
+    <td>ELEMENT_ARRAY_BUFFER</td>
+    <td>Vertex array indices</td>
+  </tr>
+  <tr>
+    <td>PIXEL_PACK_BUFFER</td>
+    <td>Pixel read target</td>
+  </tr>
+  <tr>
+    <td>PIXEL_UNPACK_BUFFER</td>
+    <td>Texture data source</td>
+  </tr>
+  <tr>
+    <td>TEXTURE_BUFFER</td>
+    <td>Texture data buffer</td>
+  </tr>
+  <tr>
+    <td>TRANSFORM_FEEDBACK_BUFFER</td>
+    <td>Transform feedback buffer</td>
+  </tr>
+  <tr>
+    <td>UNIFORM_BUFFER</td>
+    <td>Uniform block storage</td>
+  </tr>
+</table>
+
+<table border>
+  <tr>
+    <th>Name</th>
+    <th>Type</th>
+    <th>Initial Value</th>
+    <th>Legal Values</th>
+  </tr>
+  <tr>
+    <td>BUFFER_SIZE</td>
+    <td>int64</td>
+    <td>0</td>
+    <td>any non-negative integer</td>
+  </tr>
+  <tr>
+    <td>BUFFER_USAGE</td>
+    <td>enum</td>
+    <td>STATICK_DRAW</td>
+    <td>STREAM_DRAW,STREAM_READ,STREAM_COPY,STATIC_DRAW,STATIC_READ,STATIC_COPY,DYNMIC_DRAW,DYNAMIC_READ,DYNAMIC_COPY</td>
+  </tr>
+  <tr>
+    <td>BUFFER_ACCESS</td>
+    <td>enum</td>
+    <td>READ_SRITE</td>
+    <td>READ_ONLY,WRITE_ONLY,READ_WRITE</td>
+  </tr>
+  <tr>
+    <td>BUFFER_MAPPED</td>
+    <td>boolean</td>
+    <td>FALSE</td>
+    <td>TRUE,FALSE</td>
+  </tr>
+  <tr>
+    <td>BUFFER_MAP_POINTER</td>
+    <td>void*</td>
+    <td>NULL</td>
+    <td>address</td>
+  </tr>
+  <tr>
+    <td>BUFFER_MAP_OFFSET</td>
+    <td>int64</td>
+    <td>0</td>
+    <td>any non-negative integer</td>
+  </tr>
+  <tr>
+    <td>BUFFER_MAP_LENGTH</td>
+    <td>int64</td>
+    <td>0</td>
+    <td>any non-negative integer</td>
+  </tr>
+  <tr>
+    <td>BUFFER_SIZE</td>
+    <td>int64</td>
+    <td>0</td>
+    <td>any non-negative integer</td>
+  </tr>
+</table>
+<p> bindしただけではまだ領域が確保されない. BufferDataを呼び出して, targetにbindされたbuffer objectの領域を確保する. void BufferData(enum target, sizeiptr size, const void *data, enum usage); sizeは領域のサイズ, *dataはクライエント側のデータであり, それをbufferにコピーする. usageは以下の説明となる:
+<p>STREAM_DRAW: クライエント側のバッファを一度指定することで, GLはそこからデータを引き出し続ける.
+<p>STREAM_READ: GLからクライエントへ
+<p>STREAM_COPY: GLのデータからGLのデータへ
+<p>STATIC_DRAW: データ元が不変である時に使う. パフォーマンスが良い気がする.
+<p>STATIC_READ:
+<p>STATIC_COPY:
+<p>DYNAMIC_DRAW:
+<p>DYNAMIC_READ:
+<p>DYNAMIC_COPOY:
+
+<p> BufferDataを呼び出すと既にあるデータは消去される. 生成できない場合OUT_OF_MEMORYエラーとなる. void BufferSubData(enum target, intptr offset, sizeiptr size, const void *data); によって, データを置き換える. BUFFER_SIZEを超えた領域まで置き換えることはできない. 
+
+<p>実は, GLのbufferが持つデータにクライエント側からアクセスできる. void* MapBufferRange(enum target, intptr offset, sizeiptr length, bitfield access); エラーが起きなければ, bufferの指定した領域へのポインターが返される.
+<p> accessとしては次のものがある:
+<p> MAP_READ_BIT: クライエント側がreadする. 
+<p> MAP_WRITE_BIT: クライエント側がデータを書き込む.
+<p> MAP_INVALIDATE_RANGE_BIT: bufferの領域の全てのrangeに書き込まなくてもエラーを出さない. writeのみで使う
+<p> MAP_INVALIDATE_BUFFER_BIT: buffer全体にかき込まなくてもエラーを出さない. writeのみで使う.
+<p> MAP_FLUSH_EXPLICIT_BIT: 
+<p> MAP_UNSYNCHRONIZED_BIT: Bufferのrangeに対して命令でアクセス待ちになっていてもすぐ返す.
+<p> MapBufferRangeによってbuffer objectのstateは変化する: 失敗時はnullが返される.
+
+<table border>
+  <tr>
+    <th>Name</th>
+    <th>Value</th>
+  </tr>
+  <tr>
+    <td>BUFFER_ACCESS</td>
+    <td>Depends on access</td>
+  </tr>
+  <tr>
+    <td>BUFFER_ACCESS_FLAGS</td>
+    <td>accessのビットフィールドに対応</td>
+  </tr>
+  <tr>
+    <td>BUFFER_MAPPED</td>
+    <td>TRUE</td>
+  </tr>
+  <tr>
+    <td>BUFFER_MAP_POINTER</td>
+    <td>pointer to the data store</td>
+  </tr>
+  <tr>
+    <td>BUFFER_MAP_OFFSET</td>
+    <td>offset</td>
+  </tr>
+  <tr>
+    <td>BUFFER_MAP_LENGTH</td>
+    <td>length</td>
+  </tr>
+</table>
+
+<p> 既にmapされているbufferに対してMapBufferRangeは実行できない. MAP_READ_BIT, MAP_WRITE_BITの少なくとも一方はsetする. 
+<p> void* MapBuffer(enum target, enum mbaccess); はbufferの全体に対してmapする. mbaccessはenumであることに注意する. enumとして, READ_ONLY, WRITE_ONLY, READ_WRITEがある. 
+<p> flushを使う場合, void FlushMappedBufferRange(enum target, intptr offset, sizeiptr length); で変更をflushする. この範囲指定は, mapに対応するrangeを基準としていることに注意.
+<p> マッピング後はboolean UnmapBuffer(enum target);を呼び出す. 
+<p> void* CopyBufferSubData(enum readtarget, enum writetarget, intptr readoffset, intptr writeoffset, sizeiptr size); ではbufferのdataを別のbufferのdataへコピーする. targetとしてCOPY_READ_BUFFER, COPY_WRITE_BUFFERがよく使われる. どちらのtargetも同じbuffer objectとbindしているとINVALID_VALUEエラーとなる. あとrangeを超えてもINVALID_VALUE. どちらかのtargetが0 bindだったり, buffer objectがmapされているとINVALID_OPERTIONとなる.
+<p> VertexAttribPointerはARRAY_BUFFER_BINDINGを指定されたindexのクライエントステートのVERTEX_ATTRIB_ARRAY_BUFFER_BINDINGにコピーする. 
+<p> BindBufferによってbuffer objectはELEMENT_ARRAY_BUFFERにbindできる. 
+<h2>2.10 Vertex Array Objects</h2>
+<p> buffer objectは集約してvertex array objectをなす. void GenVertexArrays(sizei n, uint *arrays); でn個のvertex array objectを発行し*arraysに渡す. void DeleteVertexArrays(sizei n, const uint *arrays)でn個消す. 消去されたvertex array objectにbindしていたものは0にbindする.
+<p> void BindVertexArray(uint array); によってvertex array objectを初期化.
+
+<h2>2.11 Vertex Shaders</h2>
+<p> vertex shaderとはstring配列でありGLSLソースコードである. まず, shader objectにvertex shaderをロードし, コンパイルすることで使える. このようにしてshader objectにvertex shaderを組み込み, shader objectをいくつか集めてprogram objectにattachする. そしてlinkすることで, プログラムが完成する. このプログラムをcurrent program objectで使うことで, 頂点を処理できる.
+<p> vertex shaderに加え, geometry shadersとfragment shadersも同様な過程でプログラムを作る. gemetry shaderはprimitiveの生成, fragment shaderはラスターで使う. 1つのprogram objectにvertex shader, geometry shader, fragment shaderを組み込むことができる.
+<p> vertex shaderはいくつかの変数を持つ. Vertex attributesは各頂点の値であり, Uniformsはプログラムごとの変数でプログラム実行時は定数. SamplersはaUniformsの中でもテクスチャに使う. 
+<p> uint CreateShader(enum type); でshader object生成. typeはVERTEX_SHADERなど. 
+<p>void ShaderSource(uint shader, sizei count, const char **string, const int *length); でshader objectにGLSLソースコードを組み込む. *lengthはそれぞれのstringの長さだが, nullを入れると全てのstringはnull terminateとみなし終端まで読み取る. 既にshader objectにGLSLが組み込まれているなら, 元のGLSLは破棄される.
+<p>ロードしたら, void CompileShader(uint shader); でshader をコンパイルする. shader objectはCOMPILE_STATUSを持つ. GetShaderivで取得できる.  TRUEなら成功, FALSEなら失敗. ShaderInfoLogでコンパイル情報取得. シェーダーオブジェクトはvoid DeleteShader(uint shader)で消去. プログラムにattachされていなければすぐ消えるが, そうでなければまずDELETE_STATUSがtrueとなる. このstatusもGetShaderivで取得できる.
+<p> uint CreateProgram(void); でprogram object生成. 失敗なら0. 
+<p> void AttachShader(uint program, uint shader); でshader objectをattachする. これはGLSLのロード前やコンパイル前にもして良い. 既にattachされているshaderならINVALID_OPERATIONとなる. 同じshaderをまた別のprogramにattachできる. void DetachShader(uint program, uint shader); でdetachする. detachされたshader objectのDELETE_STATUSがtrueのとき, shader objectがどこのprogramにもattachされていない状態になって初めて消去される. 
+<p> void LinkProgram(uint program); でshader objectをリンクして実行プログラム完成. program objectはLINK_STATUSを持ち, GetProgramivで取得できる. TRUEなら成功, FALSEなら失敗. GetProgramInfoLogでリンク情報取得. void UseProgram(uint program); で使用できる. UseProgramを呼び出した後は, attachされているshader objectをコンパイルしようがdetachしようが, 新たなshader objectをattachしようがどうでもいい. しかし, さらにprogram objectがLinkProgramを呼び出した時は新たな実行プログラムがレンダリングで使われる. 失敗した時は依然として同じ実行プログラムが使われる. void DeleteProgram(uint program); でどのcontextでも使われていない時にprogram object消去. そうでない場合はdelete flagがsetされ消去待ちとなる. program objectが消去されるとattachしているshader objectはdetachされる.
+
+<p> vertex shaderではattribute variableを定義でき, VertexAttrib*にbindされた変数はクライエントから変数名でクエリすることでアクセスできる. これはリンク前に行う必要がある. 変数がfloat, vec2, vec3, vec4ならattributeのindex iでアクセスできる. 行列の場合は, 4x2行列ならi, i+1のindexで各列にアクセスできる. attribute variableはプログラムで実際に使われているならばactiveとみなされる. void GetActiveAttrib(uint program, uint index, sizei bufSize, sizei *length, int *size, enum *type, char *name); でactive attribute variableを取得できる. indexに0で最初のattribute variable, ACTIVE_ATTRIBUTES-1で最後のactive attribute variableを取得できる. ACCTIVE_ATTRIBUTESはGetProgramivで取得できる. 注意するのはこのindexはあくまでもactiveなもので完結しているので, 一般にattribute variableが持つindexとはまた別である. programは既にlinkを終えている必要がある. *name, *lengthには変数名とその長さが返る. bufSizeで変数名の長さを制限して取得することができる. ACTIVE_ATTRIBUTE_MAX_LENGTHは最大の変数名の長さのステータスでGetProgramivで取得できる. *typeは色々あるが, FLOAT, FLOAT_VEC2, FLOAT_VEC3, FLOAT_MAT2, FLOAT_MAT3x2, INT_VEC4, 他にもいくらでも組み合わせが考えられる. *sizeにはsizeof(*type) が返る. FLOAT_MAT3x2ならsizeは6となる.
+<p> クエリすることができる: int GetAttribLocation(uint program, const char *name);でインデックスが取得できる. null terminated. これもリンク後に行う必要がある. activeでなかったりエラーなら-1が返る.
+<p> void BindAttribLocation(uint program, uint index, const char *name) では変数名に対するindexを指定できる. これはリンク前に行う.この方法以外にも, GLSLでindexを指定することもできこちらの方が楽だろう. indexはてんでばらばらではなく, matrixなどはcolumnどうしで隣接して並んでいなくてはならない. よってこの割り当てができないようなindexの指定の仕方をするとlinkできなくなる. GLSLでもBindAttribLocationでもindexが指定されている時は, GLSLの方を優先する. 実は, shader objectをattachする前や, プログラムに使われていない変数名に対してもBindAttibLocationで割り当てることができる. 使われていない変数名があるなら無視される.
+
+<p> Uniform Variables に対しては, buffer objectはnamed uniform blockを持ちuniform variableにはuniform block indexが割り当てられる. named uniform block外のものはdefault uniform blockに割り当てられる.
+<p> default uniform block内のniform variableのindexはint GetUniformLocation(uint program, const char *name); で取得できる. 
+<p> named uniform blockも名前からblockのindexを取得できる: uint GetUniformBlockIndex(uint program, const char *uniformBlockName); void GetActiveUniformBlockName(uint program, uint uniformBlockIndex, sizei bufSize, sizei *length, char *uniformBlockName); でactive uniform block's nameを取得できる.
+<p> void GetActiveUniformBlockiv(uint programm, uint uniformBlockIndex, enum pname, index *params); でactive uniform blockの情報が引き出せる.
+<p> void GetUniformIndices(uint program, sizei uniformCount, const char **uniformNames, uint *uniformIndices); でuniformCount個のuniform variableのインデックスをまとめて取得できる. 
+<p> void GetActiveUniformName(uint program, uint uniformIndex, sizei bufSize, sizei *length, char *uniformName); でuniformIndexに対応する変数名とその長さを取得できる.
+<p> void GetActiveUniform(uint program, uint index, sizei bufSize, sizei *length, int *size, enum *type, char *name); 
+<p> void GetActiveUniformsiv( uint program, sizei uniformCount, const uint *uniformIndices, enum pname, int *params );
+<p> uniform variableに値をロードするには, 次のようなコマンドを使う: void Uniform{1234}{if}(int location, T value); void Uniform{1234}{if}v(int location, T value); void UniformMatrix{234}fv(int location, sizei count, boolean transpose, const float *value); void UniformMatrix{2x3,3x2,2x4,4x2,3x4,4x3}fv( int location, sizei count, boolean transpose, const float *value ); vつきの命令は配列に対してロードするのでロードしたい長さを指定している. 
+
+<p> 今更だが, 行列の要素は(列, 行)で考えており一般的なものとは逆だ. これは行列をcolumnを並べたものと見れば良い. 最初のインデックスでcolumn指定, そしてrowを指定.
+<p> void UniformBlockBinding(uint program, uint uniformBlockIndex, uint uniformBlockBinding); でuniform blockのbinding pointを指定することができる.
+
+<p> Samplerはtexture objectのuniform variableであり, texture image unitを値として持ち, この値でtextureは識別される. GindTextureでtargetにbindできる. GetUniformLocationでsamplerの場所をクエリできる.
+
+<p> void TransformFeedbackVeryings(uint program, sizei count, const char **varyings, enum bufferMode); でレコード. bufferModeはINTERLEAVED_ATTRIBS ofr SEPARETE_ATTRIBS. 
+<p> void GetTransformFeedbackVarying(uint program, uint index, sizei bufSize, sizei *length, sizei *size, enum *type, char *name);
+
+<p> vertex shaderで処理されたvertexは, geometry shaderがactiveならそこへ渡され, そうでないならば次が行われる:
+<ul>
+  <li>Perspective division on clip coordinates</li>
+  <li>Viewport mapping, including depth range scalingが行われる.</li>
+  <li>Flatshading</li>
+  <li>Clipping, including client-defined half-spaces</li>
+  <li>Front face determination</li>
+  <li>Generic attribute clipping</li>
+</ul>
+
+<p> Shader Inputs: vertex attributes, uniform variablesに加え, vertex shaderはgl_VertexIDとgl_InstanceIDというbuilt-in , Read Onlyの変数にアクセスできる.
+<p> gl_VertexIDはDrawArraysなどDraw命令で暗黙に渡されるindexを指す.
+<p> gl_InstanceIDはcurrent primitiveのindexを持つ.
+<p> Shader Outputs: ユーザー定義のvarying variableに書き込める. built-in special variable gl_Positionはhomogeneous vertex positionを持つ. gl_ClipDistanceやgl_PointSizeなど他にもbuilt-inのものがある.
+
+<h2>2.12 Geometry Shaders</h2>
+<p>
+</html>

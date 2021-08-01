@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>github記事</title>
+<meta http-equive="content-type" charset="utf-8">
+<link rel="icon" href="/img/favicon.ico">
+<link rel="stylesheet" href="/css/simple.css">
+</head>
+<script src="https://cdn.jsdelivr.net/gh/google/code-prettify@master/loader/run_prettify.js?skin=desert"></script>
+<body>
+<p><a href="../">戻る</a>
+<h1>github記事</h1>
+<p>July 17, 2020
+<p> 最近のgithubはクラウドビルド環境などが素晴らしいためその機能も使いこなしたいと思う. gitは操作対象のブランチを省略できるので混乱しやすい. 
+
+<a href="https://qiita.com/konweb/items/621722f67fdd8f86a017">【Git】基本コマンド</a> を丸写しにした部分が多い. 
+<pre>
+<code>
+git init
+git add *
+git commit -m "initial commit"
+
+git push origin master //master 更新. 
+</code>
+</pre>
+
+<pre>
+<code>
+git add . //すべてのファイル・ディレクトリ
+git add *.css //すべてのCSSファイル
+git add -n //追加されるファイルを調べる
+git add -u //変更されたファイルを追加する
+git rm --cached //addしてしまったファイルを除外
+</code>
+</pre>
+
+<pre>
+<code>
+git commit -a //変更のあったファイルすべて
+git commit --amend //直前のコミットを取り消す
+git commit -v //変更点を表示してコミット
+</code>
+</pre>
+
+<p> <a href="https://zaief.jp/terminal/fzf">fzf解説では</a> git add をfzfを使って変更のプレビューをみることができ, とても便利. 
+<p> <h2>参考</h2>
+<a href="https://blog.katsubemakito.net/git/git-config-1st">https://blog.katsubemakito.net/git/git-config-1st</a> git configについて詳しく解説している. 
+
+</body>
+</html>

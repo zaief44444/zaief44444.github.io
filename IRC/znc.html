@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>ZNC解説</title>
+<meta http-equive="content-type" charset="utf-8">
+<link rel="icon" href="/img/favicon.ico">
+<link rel="stylesheet" href="/css/simple.css">
+</head>
+<body>
+<p><a href="./">戻る</a>
+<h1>ZNC解説</h1>
+<p> Mar 8, 2020
+<p> IRCはそのまま使うには不便なのは自明. チャンネルから切断している間のログはなく, 自分のネットワークのホストは丸見えになってしまうので, クライエントから直接IRCサーバーへつなぐのではなくVPNサーバーなどリモートサーバーにbouncerを起動させることでこれらの問題を解決する. 今回はbouncerとしてメジャーなZNCを使う方法について解説したい. 
+<h2>インストール</h2>
+<p> 多くのLinux環境に対応している. Archならば pacman -S znc でインストールできる. 今回znc 1.7.5のバージョンで解説している. バージョンにより若干異なるが概ねは指示を読めば大丈夫だろう.
+
+<p> 今回 <a href="https://tom.busby.ninja/setting-up-znc-IRC-bouncer-to-use-tor/">https://tom.busby.ninja/setting-up-znc-IRC-bouncer-to-use-tor/</a> を全面的に参考にしている. ここよりも参照先を見た方が丁寧だろう. 
+<h2>IRCサーバーのユーザー登録</h2>
+<p> IRCサーバーの多くでユーザー登録ができ, また推奨されている. IRCサーバーのユーザー登録してからZNCのネットワークを構成するという順でないといけない. 今回yamadaというユーザーで登録したい場合で解説する. パスワード登録の方法で解説しているが, 気が向いたらCertFPでの認証も解説するかもしれない. 
+<h3>freenodeの場合</h3>
+<pre>
+<code>
+/server add freenode chat.freenode.net/6697 -ssl
+</code>
+</pre>
+
+<p> <a href="https://freenode.net/kb/answer/registration">https://freenode.net/kb/answer/registration</a> はfreenodeの公式ドキュメントだが, それを読むのも面倒という人のためにコマンドだけ抽出.
+<pre>
+<code>
+/nick yamada
+/msg NickServ REGISTER password yamada@email.com 
+</code>
+</pre>
+<p> するとメールが送られてくるはずなので指示に従うだけ. 
+
+<p> <a href="https://freenode.net/kb/answer/weechat">https://freenode.net/kb/answer/weechat</a> を参考にSASLを設定.
+<pre>
+<code>
+/set irc.server.freenode.sasl_mechanism PLAIN
+/set irc.server.freenode.sasl_username &ltnickname&gt
+/set irc.server.freenode.sasl_password &ltpassword&gt
+/save
+</code>
+</pre>
+<p> freenodeのチャンネルの探し方は次のコマンドで. <a href="https://freenode.net/kb/answer/findingchannels">https://freenode.net/kb/answer/findingchannels</a> に書いてあるが.
+<pre>
+<code>
+/msg alis LIST *searchterm*
+</code>
+</pre>
+
+<h2>zncユーザー作成</h2>
+<p> ルートユーザーでzncを起動するのはとても危険なので, zncユーザーを作りznc専用のアクセスのみ許可するようにしてセキュリティを担保する. <a href="https://wiki.znc.in/Running_ZNC_as_a_system_daemon">https://wiki.znc.in/Running_ZNC_as_a_system_daemon</a> を参考にすればよいが, ここでも説明をかく. まず次のコマンドでzncユーザーを作成する.
+<pre>
+<code>
+sudo useradd --create-home -d /var/lib/znc --system --shell /sbin/nologin --comment "Account to run ZNC daemon" --user-group znc
+</code>
+</pre>
+<p> 普段見慣れないオプションがあると思うが, --create-homeは-mと等価, -dで/var/lib/zncをホームディレクトリとして指定. --systemはsystem用のアカウントでこのアカウントからの様々なファイルへのアクセスを制限させる. --shell /sbin/nologin はこのzncユーザーから他のユーザーへログインできないアカウントなる. --user-groupも見慣れない感じだが, -Uと等価, -gと若干違ってこのユーザー名と同じグループを作成してそのユーザーをそのグループに入れる. つまりzncユーザーとzncグループを作成し, zncユーザーはzncグループに属するということだ. しかしながらこのオプションは指定しなくても勝手にグループは作成されるものだが, この--systemオプションがついていると実は/etc/login.defsを読まないのでこのデフォルトの設定は全てオフになってしまう為このように明示的にグループ作成をオプションに入れないといけない. 
+<p> <a href="https://qiita.com/LostEnryu/items/9b0c363877581dc1171f">https://qiita.com/LostEnryu/items/9b0c363877581dc1171f</a> nologinについてはここも参考になる.
+<p> zncで使うデータを入れるディレクトリはデフォルトでは~/以下に入れてしまうが, /var/lib/znc で扱う方が安全なので次のオプションでzncをセットアップ.
+<pre>
+<code>
+sudo -u znc /usr/bin/znc --datadir=/var/lib/znc --makeconf
+</code>
+</pre>
+
+<h2>ZNCのネットワーク構成</h2>
+<p> znc --makeconfで一つのIRCサーバー(ネットワーク)へ接続するデーモンを構成できる. 今回yamadaというnicknameで解説する. ZNCへのポートを6667以外に適当に選んでおく. 今回1123にした. 6667を避ける理由はwebadminを起動させるため.
+<pre>
+<code>
+% sudo -u znc /usr/bin/znc --datadir=/var/lib/znc --makeconf                                                     [1]
+[ .. ] Checking for list of available modules...
+[ ** ]
+[ ** ] -- Global settings --
+[ ** ]
+[ ?? ] Listen on port (1025 to 65534): 1123
+[ ?? ] Listen using SSL (yes/no) [no]:
+[ ?? ] Listen using both IPv4 and IPv6 (yes/no) [yes]:
+[ .. ] Verifying the listener...
+[ ** ] Unable to locate pem file: [/var/lib/znc/znc.pem], creating it
+[ .. ] Writing Pem file [/var/lib/znc/znc.pem]...
+[ ** ] Enabled global modules [webadmin]
+[ ** ]
+[ ** ] -- Admin user settings --
+[ ** ]
+[ ?? ] Username (alphanumeric): yamada
+[ ?? ] Enter password:
+[ ?? ] Confirm password:
+[ ?? ] Nick [yamada]:
+[ ?? ] Alternate nick [yamada_]:
+[ ?? ] Ident [yamada]:
+[ ?? ] Real name (optional):
+[ ?? ] Bind host (optional):
+[ ** ] Enabled user modules [chansaver, controlpanel]
+[ ** ]
+[ ?? ] Set up a network? (yes/no) [yes]: no
+[ ** ]
+[ .. ] Writing config [/var/lib/znc/configs/znc.conf]...
+[ ** ]
+[ ** ] To connect to this ZNC you need to connect to it as your IRC server
+[ ** ] using the port that you supplied.  You have to supply your login info
+[ ** ] as the IRC server password like this: user/network:pass.
+[ ** ]
+[ ** ] Try something like this in your IRC client...
+[ ** ] /server &ltznc_server_ip&gt 1123 yamada:&ltpass&gt
+[ ** ]
+[ ** ] To manage settings, users and networks, point your web browser to
+[ ** ] http://&ltznc_server_ip&gt:1123/
+[ ** ]
+[ ?? ] Launch ZNC now? (yes/no) [yes]: no
+</code>
+</pre>
+<p> とりあえず今はネットワークも構成せずzncを起動しない. 
+
+<h2>weechatからZNCへ繋ぐ</h2>
+<p> 次のコマンドでfreenode用のZNCサーバーをweechatに追加する. これでZNCサーバーへ自動ログインができる.
+<pre>
+<code>
+/server add znc_freenode &ltZNCサーバーのIPアドレス&gt/1123 \
+  -username=yamada/freenode -password=password
+</code>
+</pre>
+
+<h2>systemdに登録して自動で起動するようにする</h2>
+<p> サーバーを再起動させた後zncを起動するためにいちいちzncコマンドを打つのは面倒臭いので登録する. systemdユニットを作る. /etc/systemd/system/znc.serviceを作成し以下を記述.
+<pre>
+<code>
+[Unit]
+Description=ZNC, an advanced IRC bouncer
+After=network-online.target
+     
+[Service]
+ExecStart=/usr/bin/znc -f --datadir=/var/lib/znc
+User=znc
+     
+[Install]
+WantedBy=multi-user.target
+</code>
+</pre>
+<p> systemdユニット起動.
+<pre>
+<code>
+sudo systemctl enable znc.service
+sudo systemctl start znc.service
+</code>
+</pre>
+
+<p> webadminへ行き, 6697ポートを追加, freenodeのネットワークを構成する. nickname, ホストなどを設定 ここは参照先を参考にしてほしい. 
+
+<p> 構成し終わったら, <a href="https://wiki.znc.in/Weechat">https://wiki.znc.in/Weechat</a>に従ってweechatからzncへsslを使って通信できる様にしたい. まずsslを発行する.
+<pre>
+<code>
+sudo -u znc cat /var/lib/znc/znc.pem | openssl x509 -sha512 -fingerprint -noout | tr -d ':' | tr 'A-Z' 'a-z' | cut -d = -f 2
+162f9c92f80b048efb1ec06d4d04edab9fb7c399c36a2879a23994197970c8fbcefbe264401ea626b600b01e04bf99a4b483cdfd16ca4246de7958bad54bda11
+</code>
+</pre>
+
+<p> 次のweechatのコマンドでweechatとzncでssl通信をする. my.bouncer.netはもちろんzncを入れるサーバーのipアドレス.
+<pre>
+<code>
+/server add freenode-znc my.bouncer.net/6697 -ssl -username=yamada/freenode -password=password 
+/set irc.server.freenode-znc.ssl_fingerprint 162f9c92f80b048efb1ec06d4d04edab9fb7c399c36a2879a23994197970c8fbcefbe264401ea626b600b01e04bf99a4b483cdfd16ca4246de7958bad54bda11
+/save
+/connect freenode-znc
+</code>
+</pre>
+<p> weechatではzncコマンドは外部コマンドなので安全性のためからデフォルトで無効になっている. 
+<pre>
+<code>
+/set irc.network.send_unknown_commands on
+</code>
+</pre>
+<p> もしくはaliasを作る
+<pre>
+<code>
+/alias add znc /quote znc
+</code>
+</pre>
+
+<p> zncコマンドでfreenodeのsslを信用する. fingerprintはバッファで指示されたものをコピペ.
+<pre>
+<code>
+/znc AddTrustedServerFingerprint e9:db:e1:0c:79:66:a8:da:0c:84:18:bc:81:59:6c:87:b0:25:7f:b4:80:2d:94:25:d6:40:2c:dc:96:03:51:c8
+</code>
+</pre>
+
+<p> プラグインを入れてみる.
+<pre>
+<code>
+/script install zncplayback.py
+</code>
+</pre>
+
+<h2>後からZNCの設定を変更したい</h2>
+/zncコマンドを使ってネットワークを追加できる. 上で設定したネットワークはfreenode用だったが, ネットワークは複数設定できる. ここでは例としてgrepnetのircサーバーを <a href="https://grepnet.org/">https://grepnet.org/</a> に従って追加する.  まずweechatでzncに繋ぐ.
+<pre>
+<code>
+/znc addnetwork grepnet
+/znc jumpnetwork grepnet
+/znc addserver irc.grepnet.org +6697
+/znc connect
+</code>
+</pre>
+
+<h2>ログについて</h2>
+<p> なぜかログについて解説している記事が皆無なのだが, それではzncを導入した意味がなくなってしまう. ログ管理こそzncの真髄なのだから. まずログモジュールを次のコマンドで入れる. モジュール自体はzncにもともと入っている.
+<pre>
+<code>
+/znc LoadMod log
+</code>
+</pre>
+<p> このモジュールを使うには, /msg *log コマンドで*logというバッファが開かれる. そこでHelpとうてば使えるコマンドが表示される. しかしこのコマンド達はルールの設定をするためのものでありログを読むものではない. じゃあログをどうやって読むか. ログが置かれている場所はzncを起動しているサーバーの/var/lib/znc/users/$USER/moddata/log/ 以下にあるが, IRCクライエントでログを読みたい. ログの場所は実はモジュールのロードの仕方によって異なることに注意. デフォルトではユーザーの文脈でlogを管理するはず. <a href="https://wiki.znc.in/Log">https://wiki.znc.in/Log</a> にログの管理場所の詳細がある. ここではbacklog外部モジュールを利用してzncのログを読めるようにする. <a href="https://github.com/FruitieX/znc-backlog/blob/master/README.md">https://github.com/FruitieX/znc-backlog/blob/master/README.md</a> の指示に従う. 私の場合は/user/lib/znc/にモジュールをおいた. 
+<pre>
+<code>
+git clone https://github.com/FruitieX/znc-backlog
+cd znc-backlog
+make
+cp backlog.so /user/lib/znc/ 
+</code>
+</pre>
+
+<p> backlogモジュールを読み込む.
+<pre>
+<code>
+/znc LoadMod backlog
+</code>
+</pre>
+
+<p> ログを読み込むパスを指定する. ユーザーの文脈では次のようにパスを設定すればいいはず.
+<pre>
+<code>
+/msg *backlog LogPath /var/lib/znc/users/$USER/moddata/log/$NETWORK/$WINDOW/*.log
+</code>
+</pre>
+
+<p> エイリアスを指定.
+<pre>
+<code>
+/alias add bl msg *backlog $channel $1
+</code>
+</pre>
+<p> あとはログを見たいバッファで/blとすれば良い.
+
+<p> weechat側でログを管理する必要がなくなったので, weechatのログをオフにする.
+<pre>
+<code>
+set logger.level.irc 2
+</code>
+</pre>
+
+<h2>zncのコマンドの扱い</h2>
+<p> 今までznc特有のコマンドは /zncをつけていたが, /zncコマンドを一回使うと*statusバッファが開かれているはずだ. このstatusバッファでは/zncをつけなくても単に例えばaddnetwork grepnetとするだけでgrepnetで飛ベたりする. この様にバッファによってコマンドの文脈が変わるということが, ircの一つ難しいところなので意識しなくてはならない. /msg *log コマンドの意味は *log というバッファにコマンドを送るということだと推測できる. 例えば*logバッファ以外のバッファにいたとする. そこで次のコマンドをうつ.
+<pre>
+<code>
+/msg *log listrules
+</code>
+</pre>
+<p> すると*logバッファに行ってみるとそこでlistrulesした時と同じ結果になっているだろう. また, *logバッファでhelpを見れば分かる通り, コマンド名はListRulesで説明されている. しかしながら全て小文字でもコマンドをちゃんと解釈してくれるので, listrulesでokと言うわけだ. 
+
+<h2>モジュールについて</h2>
+<p> ログについて解説したが, もう一度説明をまとめる. logはモジュールなのだから, /znc LoadMod log としなければ/msg log としても*logバッファは起動されない. モジュールをまず導入するには次のコマンドする. *statusバッファにいないなら/znc を先頭につける. 
+<pre>
+<code>
+LoadMod &ltモジュール名&gt
+</code>
+</pre>
+<p> 次に, このモジュールのバッファを開きたいとする. そのためには次のコマンドする.
+<pre>
+<code>
+/msg *&ltモジュール名&gt
+</code>
+</pre>
+<p> すると*&ltモジュール名&gtというバッファが開かれるのでそこへ行き, そのモジュールで使えるコマンドを確認するには次のコマンドする.
+<pre>
+<code>
+help
+</code>
+</pre>
+
+<h2>Controlpanelモジュール</h2>
+<p> webadminで設定をする他にcontrolpanelモジュールという標準モジュールを使うことでzncの設定ができる.
+<pre>
+<code>
+/znc LoadMod controlpanel
+</code>
+</pre>
+
+<h2>pushモジュール</h2>
+<p> <a href="https://github.com/jreese/znc-push">https://github.com/jreese/znc-push</a> 
+<h2>日本サーバーへ入るための文字コード</h2>
+<p> 日本サーバーはutf-8ではなくISO-2022-JPという文字コードで扱うところが多いので, 文字コードを適切に設定しなくてはならない. この設定をしないと/join #チャンネル名 をしてもなぜか無人だったり入れなかったりする. これは別の文字コードでjoinしているので別チャンネルという扱いになっているからで, zncではなぜか文字化けしていないのにこういう現象が起きる. ここでは例としてjpnetというネットワーク名でzncに登録したことにする. 今回weechatとznc間はutf-8で, zncとjpnetはISO-2022-JPでやりとりすることになる. <a href="https://wiki.znc.in/Charset">https://wiki.znc.in/Charset</a> を見ればわかるが, ここでも説明する. 次のコマンドするだけで良い. もちろんusername, jpnetは自分が決めたものの名前を入れる. 重要なのはweechatは何も文字コードの設定をしないということだ. znc側に任せるのだ.
+<pre>
+<code>
+/msg *controlpanel SetNetwork Encoding username jpnet ISO-2022-JP
+</code>
+</pre>
+
+<h2>参考記事</h2>
+<a href="https://blog.handlena.me/entry/2013/01/20/185717/">https://blog.handlena.me/entry/2013/01/20/185717/</a> zncはサーバーごとにアカウントかと思いきや実は複数サーバーに接続できるという話.
+<br><a href="http://kawamuray.hatenablog.com/entry/2013/08/12/213005">http://kawamuray.hatenablog.com/entry/2013/08/12/213005</a> ZNCでよく使うコマンド.
+<br><a href="https://flusp.ime.usp.br/others/2019/01/14/chatting-on-irc-with-weechat-and-znc/">https://flusp.ime.usp.br/others/2019/01/14/chatting-on-irc-with-weechat-and-znc/</a> 連携を含めてちゃんと解説してくれる貴重な記事. 
+<br><a href="http://noaboutsnote.hatenablog.com/entry/znc_slack">http://noaboutsnote.hatenablog.com/entry/znc_slack</a>

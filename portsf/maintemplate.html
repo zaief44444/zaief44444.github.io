@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>main.cテンプレート</title>
+<meta http-equive="content-type" charset="utf-8">
+<link rel="stylesheet" href="/css/hljs.css">
+<link rel="icon" href="/img/favicon.ico">
+</head>
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/tomorrow-night-blue.min.css">
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/highlight.min.js"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+<body>
+  <p><a href="./">戻る</a>
+<h1>main.cテンプレート</h1>
+<p>June 3, 2020
+<p>サウンドファイルを読み込み変換してファイルを新たに出力すると言う処理の流れは本質的な部分以外は同じような処理を繰り返すだけなので, main.cというテンプレートが用意されている. 引数を受け取り, それが適切かどうかチェックし, メモリ確保をし, 値を変数へそれぞれ代入し, 出力ファイルを適切に作成する. そして本質的な処理がなされる. 最後はメモリ解放, と言う流れだ.
+<pre>
+<code>
+/* Copyright (c) 2009 Richard Dobson
+/* main.c :  generic soundfile processing main function*/
+#include &ltstdio.h&gt
+#include &ltstdlib.h&gt
+#include &ltmath.h&gt
+#include &ltportsf.h&gt
+
+/* set size of multi-channel frame-buffer */
+#define NFRAMES (1024)
+
+/* TODO define program argument list, excluding flags */
+enum {ARG_PROGNAME,ARG_INFILE,ARG_OUTFILE,ARG_NARGS};
+
+int main(int argc, char* argv[])
+{
+/* STAGE 1 */	
+	PSF_PROPS inprops,outprops;									
+	long framesread;	
+	/* init all dynamic resources to default states */
+	int infile = -1,outfile = -1;
+	int error = 0;
+	PSF_CHPEAK* peaks = NULL;	
+	psf_format outformat =  PSF_FMT_UNKNOWN;
+	unsigned long nframes = NFRAMES;
+	float* inframe = NULL;
+	float* outframe = NULL;
+	/* TODO: define an output frame buffer if channel width different 	*/
+	
+/* STAGE 2 */	
+	printf("MAIN: generic process\n");						
+
+	/* process any optional flags: remove this block if none used! */
+	if(argc &gt 1){
+		char flag;
+		while(argv[1][0] == '-'){
+			flag = argv[1][1];
+			switch(flag){
+			/*TODO: handle any  flag arguments here */
+			case('\0'):
+				printf("Error: missing flag name\n");
+				return 1;
+			default:
+				break;
+			}
+			argc--;
+			argv++;
+		}
+	}
+
+	/* check rest of commandline */
+	if(argc &lt ARG_NARGS){
+		printf("insufficient arguments.\n"
+			/* TODO: add required usage message */
+			"usage: MAIN infile outfile\n"
+			);
+		return 1;
+	}
+	/*  always startup portsf */
+	if(psf_init()){
+		printf("unable to start portsf\n");
+		return 1;
+	}
+/* STAGE 3 */																							
+	infile = psf_sndOpen(argv[ARG_INFILE],&inprops,0);															  
+	if(infile &lt 0){
+		printf("Error: unable to open infile %s\n",argv[ARG_INFILE]);
+		error++;
+		goto exit;
+	}
+	/* TODO: verify infile format for this application */
+
+	/* allocate space for  sample frame buffer ...*/
+	inframe = (float*) malloc(nframes * inprops.chans * sizeof(float));
+	if(inframe==NULL){
+		puts("No memory!\n");
+		error++;
+		goto exit;
+	}
+	/* check file extension of outfile name, so we use correct output file format*/
+	outformat = psf_getFormatExt(argv[ARG_OUTFILE]);
+	if(outformat == PSF_FMT_UNKNOWN){
+		printf("outfile name %s has unknown format.\n"
+			"Use any of .wav, .aiff, .aif, .afc, .aifc\n",argv[ARG_OUTFILE]);
+		error++;
+		goto exit;
+	}
+	inprops.format = outformat;
+	outprops = inprops;
+/* STAGE 4 */												
+	/* TODO: any other argument processing and setup of variables, 		     
+	   output buffer, etc., before creating outfile
+	*/
+
+	/* handle outfile */
+	/* TODO:  make any changes to outprops here  */
+
+	peaks  =  (PSF_CHPEAK*) malloc(outprops.chans * sizeof(PSF_CHPEAK));
+	if(peaks == NULL){
+		puts("No memory!\n");
+		error++;
+		goto exit;
+	}
+
+	/* TODO: if outchans != inchans, allocate outframe, and modify main loop accordingly */
+
+	outfile = psf_sndCreate(argv[ARG_OUTFILE],&outprops,0,0,PSF_CREATE_RDWR);
+	if(outfile &lt 0){
+		printf("Error: unable to create outfile %s\n",argv[ARG_OUTFILE]);
+		error++;
+		goto exit;
+	}
+/* STAGE 5 */	
+	printf("processing....\n");								
+	/* TODO: init any loop-related variables */
+
+	while ((framesread = psf_sndReadFloatFrames(infile,inframe,nframes)) &gt 0){
+	
+		/* &lt--------  add buffer processing here ------&gt  */
+
+		if(psf_sndWriteFloatFrames(outfile,inframe,framesread) != framesread){
+			printf("Error writing to outfile\n");
+			error++;
+			break;
+		}			
+	}
+
+	if(framesread &lt 0)	{
+		printf("Error reading infile. Outfile is incomplete.\n");
+		error++;
+	}
+	else
+		printf("Done: %d errors\n",error);
+/* STAGE 6 */		
+	/* report PEAK values to user */							
+	if(psf_sndReadPeaks(outfile,peaks,NULL) &gt 0){
+		long i;
+		double peaktime;
+		printf("PEAK information:\n");	
+			for(i=0;i &lt inprops.chans;i++){
+				peaktime = (double) peaks[i].pos / (double) inprops.srate;
+				printf("CH %ld:\t%.4f at %.4f secs\n", i+1, peaks[i].val, peaktime);
+			}
+	}
+/* STAGE 7 */	
+	/* do all cleanup  */    									
+exit:	 	
+	if(infile &gt= 0)
+		if(psf_sndClose(infile))
+			printf("%s: Warning: error closing infile %s\n",argv[ARG_PROGNAME],argv[ARG_INFILE]);
+	if(outfile &gt= 0)
+		if(psf_sndClose(outfile))
+			printf("%s: Warning: error closing outfile %s\n",argv[ARG_PROGNAME],argv[ARG_OUTFILE]);
+	if(inframe)
+		free(inframe);
+	if(peaks)
+		free(peaks);
+	/*TODO: cleanup any other resources */
+
+	psf_finish();
+	return error;
+}
+</code>
+</pre>
+
+<p>チェックリスト
+
+<table border>
+<tr>
+<th>項目</th>
+<th>チェック内容</th>
+</tr>
+<tr>
+  <td>Stage1 変数の宣言,初期化</td>
+  <td></td>
+</tr>
+<tr>
+  <td>Stage2 引数処理</td>
+  <td></td>
+</tr>
+<tr>
+  <td>フラグ処理</td>
+  <td>引数の先頭の方にフラグを置くことを前提としていることに注意</td>
+</tr>
+<tr>
+  <td>psf開始</td>
+  <td>psf_init()が成功するか</td>
+</tr>
+<tr>
+  <td>Stage3 読み込み</td>
+  <td></td>
+</tr>
+<tr>
+  <td>wavファィル読み込み</td>
+  <td>psf_sndOpen()が成功したか, rescaleはしないか</td>
+</tr>
+<tr>
+  <td>TODO</td>
+  <td>読み込みファイルが目的に適切かどうか</td>
+</tr>
+<tr>
+  <td>メモリ確保</td>
+  <td>サンプルデータ取得バッファが確保できたか</td>
+</tr>
+<tr>
+  <td>Stage4 出力ファイル</td>
+  <td></td>
+</tr>
+<tr>
+  <td>出力ファイル形式</td>
+  <td>拡張子が適切か, チャンネル数やビット数, サンプルレートの指定</td>
+</tr>
+<tr>
+  <td>出力ファイル生成</td>
+  <td>psf_sndCreate()が成功したか, minheader(4番目の引数)は1にして有効にしたほうがいい</td>
+</tr>
+<tr>
+  <td>Stage5 サウンド処理</td>
+  <td></td>
+</tr>
+<tr>
+  <td>サンプル読み込み</td>
+  <td>psf_sndReadFloatFramesが負の値を返さないか</td>
+</tr>
+<tr>
+  <td>Stage6</td>
+  <td>PEAKチャンクは対応していないソフトが多いので使わないほうがいい</td>
+</tr>
+<tr>
+  <td>Stage7</td>
+  <td>片付け</td>
+</tr>
+</table>
+</body>
+</html>

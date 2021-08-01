@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Go言語MySQL解説</title>
+<meta http-equive="content-type" charset="utf-8">
+<link rel="stylesheet" href="/css/hljs.css">
+<link rel="icon" href="/img/favicon.ico">
+</head>
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/tomorrow-night-blue.min.css">
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/highlight.min.js"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+<body>
+<p><a href="./">戻る</a>
+<h1>Go言語MySQL解説</h1>
+<p> Nov 14, 2020
+<p> go言語ではphpとは違いsqlは直接goからデータベースへ接続せず, sql.DBインターフェースからデータベースドライバーを介して実行することとなる. ドライバーの実装はSQLによって様々なものがあるが, MySQLでは<a href="https://github.com/go-sql-driver/mysql">go-sql-driver</a>を使うのが良い. <a href="http://go-database-sql.org/index.html">Go database/sql tutorial
+Improve this page
+</a> を参考にしている. 
+<p> 次のimport文の_は見慣れないかもしれないが, ドライバーを直接操作しないのでimport時にドライバーのinit()だけを呼び出す. 
+<pre>
+<code>
+import (
+	"database/sql"
+	_ "github.com/go-sql-driver/mysql"
+)
+</code>
+</pre>
+
+<h2>データベースに接続</h2>
+<p> まず次のコードで大体始まる.
+<pre>
+<code>
+func main() {
+	db, err := sql.Open("mysql",
+		"user:password@tcp(127.0.0.1:3306)/hello")
+  checkErr(err)
+	defer db.Close()
+
+  err := db.Ping()
+  checkErr(err)
+}
+
+func checkErr(err error) {
+  log.Fatal(err)
+}
+</code>
+</pre>
+<p> sql.Open()の第一引数はドライバー名(ドライバーのパッケージ名). 第二引数はドライバーによって異なるが, mysqlでは上のような書式となる. tcp(127.0.0.1:3306)は省略してもいいはず(ポートを変更していない限り). user:passwordはもちろんMySQLでのユーザーとパスワード. ここで注意することは, この時点ではまだデータベースと接続していない, つまり接続できるかまだわからないのでPing()を使って応答を確認する. また, 頻繁にOpen(), Close()をすると接続のリソースが重くなってしまうので接続はなるべく長く保つようにする.
+
+<h2>データベースからデータを読み取る</h2>
+<p> クエリする. クエリの関数として, Query(), Exec()があるが, Query()はrowsを返すが, Exec()はrowsを返さない, つまりデータベースに変更を与える操作をする.
+
+<p> クエリしたデータは明示的に解放しなくてはならないのでdefer rows.Close()とする. rows.Next()が最後まで到達すれば自動的に解放されるが, 途中でエラーが起きた場合はClose()してくれない. Scan()でポインターを渡して読み取るが, Goはデータを自動的にポインターの指す変数の型に変換してくれる. 変換できない時にエラーを返す.
+<pre>
+<code>
+	rows, err := db.Query("SELECT id, name, FROM users where id = ?", 1); 
+	checkErr(err)
+	defer rows.Close()
+
+	for rows.Next() {
+		var id int
+		var name string
+		err := rows.Scan(&id, &name)
+		checkErr(err)
+		log.Println(id, name)
+	}
+	err := rows.Err()
+	checkErr(err)
+</code>
+</pre>
+
+<p> 同じようなクエリを実行する場合, Prepare()関数でplaceholderつきのクエリを用意する. placeholderを使うことでクエリ分をstringで結合して作ることによるSQLインジェクションの脆弱性が改善される. 
+
+<pre>
+<code>
+	stmt, err := db.Prepare("select id, name from users where id = ?")
+	checkErr(err)
+	defer stmt.Close()
+	rows, err := stmt.Query(1)
+	checkErr(err)
+	defer rows.Close()
+	for rows.Next() {
+		// ...
+	}
+</code>
+</pre>
+
+<p> 一行だけしかデータをクエリしないなら, 次のように書くこともできる
+
+<pre>
+<code>
+var name string
+err = db.QueryRow("select name from users where id = ?", 1).Scan(&name)
+checkErr(err)
+</code>
+</pre>
+<p> Prepare()を使う場合は次のようになる
+
+<pre>
+<code>
+smt, err := db.Prepare("select name from users where id = ?")
+checkErr(err)
+defer stmt.Close()
+var name string
+err = stmt.QueryRow(1).Scan(&name)
+checkErr(err)
+</code>
+</pre>
+
+<h2>データを更新する</h2>
+<p> Query()ではなくExec()を使う
+<pre>
+<code>
+	stmt, er := db.Prepare("INSERT INTO users(name) VALUES(?)")
+	checkErr(err)
+	res, err := stmt.Exec("Dolly")
+	checkErr(err)
+	lastId, err := res.LastInsertId()
+	checkErr(err)
+	rowCnt, err := res.RowsAffected()
+	checkErr(err)
+	log.Printf("ID = %d, affected = %d\n", lastId, rowsCnt)
+</code>
+</pre>
+
+</body>
+</html>

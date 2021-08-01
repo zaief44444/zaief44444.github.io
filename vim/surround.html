@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>surround.vim解説</title>
+<meta http-equive="content-type" charset="utf-8">
+<link rel="icon" href="/img/favicon.ico">
+<link rel="stylesheet" href="/css/simple.css">
+</head>
+<body>
+<p><a href="./">戻る</a>
+<h1>surround.vim解説</h1>
+<p> Nov 10, 2020
+<p> ""や'', [], そして&ltp&gt&lt/p&gtといったタグのように囲っているものを別のものに置き換えたい場面は想像以上に多い. もちろん, もとから囲っているものはないが追加したい場合も多い. そもそもこのプラグインはとても人気なので, そのことからも有用性の高さを解するのは易い.
+
+<p><a href="https://github.com/tpope/vim-surround">https://github.com/tpope/vim-surround</a> がsurround.vimのgithubのページで簡単な説明があるが, ここでも基本から説明する. 導入は特に難しい所もないので各自で行うこと.
+
+<h2>囲いを変更, 除去する</h2>
+<p> 次のように""で囲っている場合, まずvimのカーソルを""内に持ってきてそこでcs"'と入力することで次のように''に変更できる. csはchange surroundings ... to ...という意味で解釈すると覚えやすい.
+<pre>
+<code>
+"Hello world!" 
+結果:
+'Hello world!'
+</code>
+</pre>
+
+<p> さらにタグで囲むこともできる. cs't&ltq&gt
+<pre>
+<code>
+&ltq&gtHello world!&lt/q&gt
+</code>
+</pre>
+<p> タグから""にするには, cst"とする.
+
+<pre>
+<code>
+"Hello world!" 
+</code>
+</pre>
+
+<p> ""を除去するには, ds"とする. delete surroundings という意味. 
+
+<pre>
+<code>
+Hello world! 
+</code>
+</pre>
+
+<h2>囲いを追加する</h2>
+<p> 囲いを変える, もしくは囲いを除去するのは比較的簡単だった. しかし囲いを追加するにはどこを基準に囲いたいのかも指定する必要がある. 例えば, Helloだけを囲いたい場合は, ysiw]とする. ysはyou surroundと解釈する. iwはテキストオブジェクト. 
+
+<pre>
+<code>
+[Hello] world! 
+</code>
+</pre>
+<p> さて, さっきは[ではなく]を使っていた. [を使うと, [ Hello ]のようにスペースも挿入してくれる. どっちがどっちかという覚え方は, vimではcontrol + [ をesc代わりに使う人が多いと思う. escはなんとなく空白のイメージがするので[は空白だ, と覚えれば一発.
+
+<p> 実際に次のものをcs]{で変えてみよう. 
+<pre>
+<code>
+[Hello] world! 
+結果:
+{ Hello } world! 
+</code>
+</pre>
+<p> 行全体を囲むには, yssbもしくはyss)とする.
+
+<pre>
+<code>
+{ Hello } world! 
+結果:
+({ Hello } world!) 
+</code>
+</pre>
+
+<p> タグで囲んでみよう. ysiw&ltem&gt
+
+<pre>
+<code>
+&ltem&gtHello&lt/em&gt world! 
+</code>
+</pre>
+
+<p> 単語や行に対しての囲い込みは成功した. 今度は選択部分に対して囲い込みをする. Vで囲んでS&ltp class="important"&gt としてみよう.
+
+<pre>
+<code>
+&ltem&gtHello&lt/em&gt world! 
+結果:
+&ltp class="important"&gt
+  &ltem&gtHello&lt/em&gt world! 
+&lt/p&gt
+
+</code>
+</pre>
+
+<p> .で繰り返しができるようにするためには, <a href="https://github.com/tpope/vim-repeat">repeat.vim</a>を導入すれば良い.
+
+
+</body>
+</html>

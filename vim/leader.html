@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Vimの生産性を高める</title>
+<meta http-equive="content-type" charset="utf-8">
+<link rel="icon" href="/img/favicon.ico">
+<link rel="stylesheet" href="/css/simple.css">
+</head>
+<body>
+<p><a href="./">戻る</a>
+<h1>Vimの生産性を高める</h1>
+<p> July 20, 2020
+<p> vimrcの基本的な設定を終え慣れてきた頃にまたvimrcを見直してみるのもいいかもしれない. 現状満足していてもさらなる生産性の向上の余地は無限に残されている. ただvimrcにたくさん書いても覚えなくては意味がないので, 最初からなんでも一気にやらず段階的に増やすのが良い.
+<h2>LeaderをSpaceキーにする</h2> Spaceキーはノーマルモード, ビジュアルモードでLeader候補の筆頭となる. Spaceをすでに他のキーに当てていてもLeaderに当て直す方がずっとSpaceが活躍する. Spaceは両手の親指で押せる唯一のキーだが, あらゆるソフトはSpaceキーをショートカットキーとして活用できず勿体ない. Spaceを活用しないことはVimというモードの概念が備わったエディタの特権を破棄している. 
+<pre>
+<code>
+let mepleader = "\&ltspace&gt"
+nnoremap &ltLeader&gt :w&ltCR&gt
+nnoremap &ltLeader&gt :q&ltCR&gt
+nmap &ltLeader&gt&ltLeader&gt V
+</code>
+</pre>
+<p> space + w で書き込み, space + qで終了. : + w,q + Return よりもずっと早い. shift + vのストロークよりもspace + spaceの連打が速い.
+<p>貼り付けたテキストの末尾へ自動的に移動する
+<pre>
+<code>
+vnoremap &ltsilent&gt y y`]
+vnoremap &ltsilent&gt p p`]
+nnoremap &ltsilent&gt p p`]
+</code>
+</pre>
+
+<p> vimでは無名レジスタを使ってddやDで行を消して別の場所へ貼り付ける操作をすることが多い. ここで別の場所のテキストを消すときに貼り付けたいテキストが上書きされてしまう. これを避ける策として次の方法が考えられる.
+<p> vpを使う. ペーストするとレジスタはペーストしたものに置き換えられる. これも防ぎたい場合は次のコードでvp貼り付け時にペーストバッファが上書きされないようにする. 
+<pre>
+<code>
+" vp doesn't replace paste buffer
+function! RestoreRegister()
+  let @" = s:restore_reg
+  return ''
+endfunction
+function! s:Repl()
+  let s:restore_reg = @"
+  return "p@=RestoreRegister()\&ltcr&gt"
+endfunction
+vmap &ltsilent&gt &ltexpr&gt p &ltsid&gtRepl()
+</code>
+</pre>
+<p> ddで消すのとdで消すのは改行の扱いが違う. dd + pp と D + pp を実際に試してみるとわかる.
+<p> 行番号で移動する時に 12G は 数字とshiftを同時に押すのが辛いのでReturnを代用する. BackSpace, Returnもノーマルモードやビジュアルモードでは地味に空いている.
+<pre>
+<code>
+nnoremap &ltcr&gt g
+nnoremap &ltBS&gt gg
+</code>
+</pre>
+
+<h2>filetypeを設定する</h2>
+<p> vimはデフォルトでシンタックスハイライト機能が備わっているがこれはfiletypeを拡張子などから識別してそのfiletypeに合うようにハイライトしている. しかし拡張子が一般的でなかったりするとvimはfiletypeを識別できない. ある拡張子のファイルに対して自分の好きなfiletypeとして読み込ませたい場合は次のようにする. ここではplistをxmlとして読み込ませる. plistはmacの設定ファイルのようなもの.
+
+<pre>
+<code>
+autocmd BufNewFile,BufRead *.plist setfiletype xml
+</code>
+</pre>
+
+</body>
+</html>

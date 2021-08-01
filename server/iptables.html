@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>iptables解説</title>
+<meta http-equive="content-type" charset="utf-8">
+<link rel="icon" href="/img/favicon.ico">
+<link rel="stylesheet" href="/css/simple.css">
+</head>
+<body>
+<p><a href="./">戻る</a>
+<h1>iptables解説</h1>
+<p> Mar 5, 2020
+<p> iptablesによるファイアーウォールの設定は攻撃対象になりやすいサーバーでは必須だが私は今までこの設定を完全に怠っていた. 攻撃対象としてはダメージを受ける人があまりいないだろうし, phpなど高度なアプリケーションを使っておらずhtmlだけの構成だけだし, sshは秘密鍵を持っていない限りはアクセスできない. それでもどこかでファイアーウォールを考慮する必要はあるのだろう. その理由を深く理解しないまま, 解説記事を描き始めた. 
+
+<p> まず確認として, iptablesがやることはパケットフィルタによるファイアーウォールでセキュリティ対策の一部を担う訳で, <a href="https://baremetal.jp/blog/2019/07/18/808/">https://baremetal.jp/blog/2019/07/18/808/</a> によればSQLインジェクションやXSSなどアプリケーション層への攻撃の対策はiptablesだけではできない. 
+
+<p> 今回Arch Linuxでの環境を元に解説を書いている. Arch Linuxにはデフォルトでiptablesがインストールされているはずだ. 多くのLinuxでiptablesが元から入っている. しかしCentOS7などでは別のものを使ったりしているので一応自分の環境を確かめてiptablesを使うか決めよう. それとufw(uncomplicated fire wall)というiptablesをより簡単に使えるアプリケーションがあるが, 細かい設定はiptablesの方がしやすいのではと思ったり私はそもそもラッパーをひどく嫌っているので使わない方針だ. しかし面倒くさいならば私のようにufwも使わず放置よりはufwを使った方がいいかもしれないが, ufwの方が情報が少ないのでかえって苦労するだろうとも.
+
+<h2>基礎事項</h2>
+<p> 大体のイメージは <a href="https://eng-entrance.com/linux-firewall">https://eng-entrance.com/linux-firewall</a> で掴むのがいいだろう. 特にChainの図がわかりやすい. INPUT, OUTPUT, FORWARDなど, パケットの経路をチェインという. FORWARDは別のサーバーなどへそのまま転送する経路だ. 基本的にINPUT, FORWARDはDROPポリシー, OUTPUTはACCEPTポリシーを適用するのがいいだろう. ポリシーというのはデフォルトの方針というもので, ルールとして明示されていない状況の場合はこのポリシーにしたがってパケットフィルタリングを行う. DROPポリシーとはパケットを閉じるポリシーで, ACCEPTはパケットを開くポリシーだ. INPUTにDROPポリシーが適用されているならば, ルールを追加することで自分のもつIPからだけアクセスを許可するといったことが可能になる. より詳細な図としては次のようになる. (<a href="https://wiki.archlinux.jp/index.php/Iptables">https://wiki.archlinux.jp/index.php/Iptables</a>より引用)
+<pre>
+<code>
+                               XXXXXXXXXXXXXXXXXX
+                             XXX     Network    XXX
+                               XXXXXXXXXXXXXXXXXX
+                                       +
+                                       |
+                                       v
+ +-------------+              +------------------+
+ |table: filter| &lt---+        | table: nat       |
+ |chain: INPUT |     |        | chain: PREROUTING|
+ +-----+-------+     |        +--------+---------+
+       |             |                 |
+       v             |                 v
+ [local process]     |           ****************          +--------------+
+       |             +---------+ Routing decision +------&gt |table: filter |
+       v                         ****************          |chain: FORWARD|
+****************                                           +------+-------+
+Routing decision                                                  |
+****************                                                  |
+       |                                                          |
+       v                        ****************                  |
++-------------+       +------&gt  Routing decision  &lt---------------+
+|table: nat   |       |         ****************
+|chain: OUTPUT|       |               +
++-----+-------+       |               |
+      |               |               v
+      v               |      +-------------------+
++--------------+      |      | table: nat        |
+|table: filter | +----+      | chain: POSTROUTING|
+|chain: OUTPUT |             +--------+----------+
++--------------+                      |
+                                      v
+                               XXXXXXXXXXXXXXXXXX
+                             XXX    Network     XXX
+                               XXXXXXXXXXXXXXXXXX
+</code>
+</pre>
+
+<p> 図を見ればわかるように今までfilterテーブルの話をしたがnatテーブルはPREROUTING, POSTROUTINGチェインを持つ. natでやることはパケットの書き換えである. 
+
+<h2>実際にiptablesを設定する</h2>
+<p> iptables関連のコマンドはroot権限で実行しなくてはならない. そもそも今の設定はどうなっているかを次のコマンドで調べよう. このコマンドでcan't initialize iptables table `filter': Table does not exist (do you need to insmod?) Perhaps iptables or your kernel needs to be upgraded. というエラーメッセージが表示される場合, 再起動すると大体うまく行くらしい. 理由はよくわからず.
+<pre>
+<code>
+iptables -L
+結果:
+Chain INPUT (policy ACCEPT)
+target     prot opt source               destination
+
+Chain FORWARD (policy ACCEPT)
+target     prot opt source               destination
+
+Chain OUTPUT (policy ACCEPT)
+target     prot opt source               destination
+</code>
+</pre>
+<p> 私の場合, 全部解放されていることがわかった. 
+<p> iptablesの設定が書かれている場所は /etc/iptables/iptables.rules で, systemdによってロードされる. CentOSやFedoraなどRedHad系の場合は/etc/sysconfig/iptables.rules にあるらしい. このファイルの中身を見てみよう. iptablesを特にいじっていなかったので私の場合は次のような内容だった.
+<pre>
+<code>
+# Empty iptables rule file
+*filter
+:INPUT ACCEPT [0:0]
+:FORWARD ACCEPT [0:0]
+:OUTPUT ACCEPT [0:0]
+COMMIT
+</code>
+</pre>
+<p> やはり全部解放されており, ルールは何もない. ファイルがないと言われたなら次のコマンドで生成できる.
+<pre>
+<code>
+iptables-save &gt /etc/iptables/iptables.rules
+</code>
+</pre>
+
+<p> すでにルールがあるならば, iptables.rulesをコピーしてバックアップを取ってから, 次のコマンドでデフォルトのルールへリセットできる.
+<pre>
+<code>
+iptables-restore &lt /etc/iptables/empty.rules
+</code>
+</pre>
+
+<p> とりあえずファイアーウォールを作ってみよう. 今は全体像を理解するのが大事なので, 詳細はあとで踏み込む.
+<p> 必要なチェインの作成. 次のチェインはユーザー定義チェインで, 名前はなんでもいい.
+<pre>
+<code>
+iptables -N TCP
+iptables -N UDP
+</code>
+</pre>
+
+<p> FORWARDチェインについて, サーバーをNATゲートウェイ(ルーターの働きをするマシン)としてセットアップしない場合はDROPする. 普通用途なら大体DROPする. 
+<pre>
+<code>
+iptables -P FORWARD DROP
+</code>
+</pre>
+
+<p> OUTPUTチェインは送信のチェインであるが, ここはとりあえずACCEPTでいい. 
+<pre>
+<code>
+iptables -P OUTPUT ACCEPT 
+</code>
+</pre>
+
+<p> INPUTチェインの設定. ここが一番重要で, サーバーへの接続の設定をする. ここで一つ注意するのはサーバーへssh接続している場合はちゃんと順番通り設定しないと接続できなくなってしまう. なのでssh接続を確保しつつ接続を制限する設定をしていく. 明示的に許可するものだけをルールに記述し, 最後にINPUTにDROPポリシーを適用するという流れだ. 
+
+<p> 次のコマンドのでルールを設定する以前からの接続を許可する.
+<pre>
+<code>
+iptables -A INPUT -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+</code>
+</pre>
+
+<p> loopback(lo)インターフェースからのトラフィックを全て許可する. 多くのアプリケーションやサービスで必須.
+<pre>
+<code>
+iptables -A INPUT -i lo -j ACCEPT
+</code>
+</pre>
+
+<p> トラフィックのうちINVALIDステートに一致するものを全て排除. トラフィックは4つのstateカテゴリーに分けることができ, NEW, ESTABLISHED, RELATED, INVALID である. 
+<pre>
+<code>
+iptables -A INPUT -m conntrack --cstate INVALID -j DROP
+</code>
+</pre>
+
+<p> 次のルールでは ICMP エコー要求(ping)を全て許可する. 最初のパケットだけを NEW としてカウントし, あとは全て RELATED, ESTABLISHED ルールで処理する. コンピュータはルーターではないので他のICMPトラフィックをステートNEWで許可する必要はない.
+<pre>
+<code>
+ipstate -A INPUT -p icmp --icmp-type 8 -m conntrack --csate NEW -j ACCEPT
+</code>
+</pre>
+
+<p> 新しい接続を処理するために, INPUTチェインにTCPチェインとUDPチェインを適用する. 一旦TCPチェインやUDPチェインで接続が許可されると, 以降はRELATED/ESTABLISHEDのルールで処理される. 新しいTCP接続は必ずSYNパケットから始まる. 
+<pre>
+<code>
+iptables -A INPUT -p udp -m conntrack --ctstate NEW -j UDP
+iptables -A INPUT -p tcp --syn -m conntrack --ctstate NEW -j TCP
+</code>
+</pre>
+
+<p> ポートを開いていない場合, TCP接続はTCP RESETパケットで, UDPストリームはICMP port unreachableメッセージで拒否する. 
+<pre>
+<code>
+iptables -A INPUT -p udp -j REJECT --reject-with icmp-port-unreachable
+iptables -A INPUT -p tcp -j REJECT --reject-with tcp-reset
+</code>
+</pre>
+
+<p> 他のプロトコルのために, icmp protocol unreachableメッセージで残りの受信トラフィックを拒否する最終ルールをINPUTチェインに追加する. 
+<pre>
+<code>
+iptables -A INPUT -j REJECT --reject-with icmp-proto-unreachable
+</code>
+</pre>
+
+<p> SSH接続を許可. 22番ポート以外をsshに使っている場合はその番号を指定すること.
+<pre>
+<code>
+iptables -A TCP -p tcp --dport 22 -j ACCEPT
+</code>
+</pre>
+
+<p> いよいよINPUTチェインにDROPポリシーを適用する.
+<pre>
+<code>
+iptables -A INPUT DROP
+</code>
+</pre>
+
+<p> これらのコマンドを実行した後に/etc/iptables/iptables.rulesを開いてみると, 何も変わっていないが実はこれらのコマンドは現在の設定に適用するだけでこれらの設定は再起動などで消えてしまう. 常に適用するには次のコマンドを使う.
+<pre>
+<code>
+iptables-save &gt /etc/iptables/iptables.rules
+</code>
+</pre>
+<p> では/etc/iptables/iptables.rulesがどうなっているか確認しよう. 私の場合次のような内容だった. 
+<pre>
+<code>
+# Generated by iptables-save v1.8.4 on Fri Mar  6 20:00:00 2020
+*filter
+:INPUT DROP [0:0]
+:FORWARD DROP [0:0]
+:OUTPUT ACCEPT [0,0]
+:TCP - [0:0]
+:UDP - [0:0]
+-A INPUT -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+-A INPUT -i lo -j ACCEPT
+-A INPUT -m conntrack --ctstate INVALID -j DROP
+-A INPUT -p icmp -m icmp --icmp-type 8 -m conntrack --ctstate NEW -j ACCEPT
+-A INPUT -p udp -m conntrack --ctstate NEW -j UDP
+-A INPUT -p tcp -m tcp --tcp-flags FIN,SYN,RST,ACK SYN -m conntrack --ctstate NEW -j TCP
+-A INPUT -p udp -j REJECT --reject-with icmp-port-unreachable
+-A INPUT -p tcp -j REJECT --reject-with tcp-reset
+-A INPUT -j REJECT --reject-with icmp-proto-unreachable
+-A TCP -p tcp -m tcp --dport 56789 -j ACCEPT
+COMMIT
+# Completed on Fri Mar  6 20:00:00 2020
+</code>
+</pre>
+
+<p> コマンドと若干内容が違う部分がある. このように設定を直接iptables.rulesを編集するよりコマンドで設定する方が自動的に最適化やチェックをしてくれる. あとは必要に応じて設定をどんどん追加していく.
+
+<p> WEBサーバーへのTCP接続を許可する.
+<pre>
+<code>
+iptables -A TCP -p tcp --dport 80 -j ACCEPT
+iptables -A TCP -p tcp --dport 443 -j ACCEPT
+</code>
+</pre>
+
+<p>DNSサーバーからの応答を許可する. DNSは通常はUDPだがサイズの大きいパケットだとTCPも使われる. 実はこの設定をしなくてもサーバーからDNSサーバーへ問い合わせをすると上で設定したステートが確立されてDNSからパケットを受け取ることができる. でもなぜかarchのドキュメントには当然のように記述されていたのでもしかしたら必要なのかと思い設定した. 
+<pre>
+<code>
+iptables -A TCP -p tcp --dport 53 -j ACCEPT
+iptables -A UDP -p udp --dport 53 -j ACCEPT
+</code>
+</pre>
+<p>IRCポートを解放する. (IRCバウンサーを利用している人のみ)
+<pre>
+<code>
+iptables -A TCP -p tcp --dport 113 -j ACCEPT
+iptables -A TCP -p tcp --dport 6667 -j ACCEPT
+</code>
+</pre>
+<p> 忘れずに設定を記録する 
+<pre>
+<code>
+iptables-save &gt /etc/iptables/iptables.rules
+</code>
+</pre>
+
+<p> 逆にiptables.rulesを直接編集してその変更をすぐ反映させたい場合は次のコマンドを使う
+<pre>
+<code>
+iptables-restore &lt /etc/iptables/iptables.rules
+</code>
+</pre>
+<h2>参考</h2>
+<a href="https://wiki.archlinux.jp/index.php/Iptables">https://wiki.archlinux.jp/index.php/Iptables</a>
+<br><a href="https://www.asahi-net.or.jp/~aa4t-nngk/ipttut/output/index.html">https://www.asahi-net.or.jp/~aa4t-nngk/ipttut/output/index.html</a> Oskar Andreassonが書いたチュートリアル. 技術文書としてはとても充実している.
+<br><a href="https://mako-note.com/iptables/">https://mako-note.com/iptables/</a> セキュリティ対策を色々している. 
+</html>

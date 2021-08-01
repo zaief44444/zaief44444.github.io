@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>vim-lsp解説</title>
+<meta http-equive="content-type" charset="utf-8">
+<link rel="icon" href="/img/favicon.ico">
+<link rel="stylesheet" href="/css/simple.css">
+</head>
+<body>
+<p><a href="./">戻る</a>
+<h1>vim-lsp解説</h1>
+<p> Jan 3, 2021
+<p> LSPとはLanguage Server Protocolの略であり, 構文解析や補完機能などをエディタと分離しlspサーバーとしてエディタ(クライエント)と通信を行いエディタからの編集情報を元にlspサーバーは構文エラーや補完候補を求め, エディタにその結果を渡すというような通信の規格だ, この通信という言葉はローカルでの通信, つまり自分のパソコン内で完結している通信のことであり, アプリケーションからアプリケーションに情報を渡していくものであり決してhttp通信などのようなものではない. 従来は言語ごとに補完機能を実装する必要があったが, エディタ側はlspクライエントさえ実装すればほぼ全ての言語に対応できるようになった. 
+<p> vim-lspはvimのLSPクライエントであり, 一番メジャーでありこれを使わない理由もない. インストールは各自の好きなプラグインマネージャーを使って簡単にできる.
+<p> しかしながら, vimにおいてLSP環境の導入は比較的ハードルが高い. vim-lspを取り巻くプラグインのドキュメントが貧弱なことに起因している.  <a href="https://mattn.kaoriya.net/software/vim/20191231213507.htm">Vim をモダンな IDE に変える LSP の設定</a> ではサーバーをクライエントに登録するのが面倒だ, という理由で vim-lsp-settings を導入すれば簡単になる, と書いてはいるがそんなところよりも, lspクライエントが得た情報を使って実際に機能として実装したvimのプラグインをどのように, どれくらい導入すれば良いかだとか, プラグイン同士の衝突の心配などの方が強い.
+<p> vim-lsp自体が補完機能を持っているのか, それともvim-lspはバックエンドとして作動しているだけでフロントエンドには別のプラグインが必要なのか, そのプラグインはvim-lspとどのように連携するのか, など説明が悉く足りていない. 
+<p> vimユーザーが求めているものは, vim-lsp-settingsのような隠蔽ツールではなく, 自分でエディタのカスタマイズをどれだけ理解して制御できるか, ということでありそれが嫌いならVSCodeという素晴らしい選択肢がある. vimscriptで色々設定を書くのが大変なのは, vimscriptのせいではなくプラグインのReadmeが説明不足であること, プラグインがLSPにおいてどの位置づけでの役割を持っているのか明示しないことに起因する. 
+
+<h2>neovimとLSP</h2>
+<p> LSPを語るにおいて, 今まで使われていたプラグインがどのような位置付けで役割を持っていたのか知る必要がある. その上でneovimについて語らざるを得ない.
+<p> 従来のvimは非同期通信機能が標準で搭載されておらず, neovimがそれを売りにしていた.  LSPという概念が普及する前からも, サーバーやクライエントにあたる概念がneovimのプラグインにはあった. そしてdeoplete.nvimというneovimプラグインが補完機能プラグインとして人気であった. これはLS(Language Source)が得た情報を実際に画面に表示するインターフェースであった. LSというのはLSPにおけるクライエントのようなものだったが, サーバーに依存した実装であり言語ごとにLSプラグインを用意する必要があった. 
+<p> deoplete.nvimがやったことは補完情報から画面表示へのインターフェースを標準化することであった. LSPが登場する前はLSを標準化する術はなかった.
+<p> LSPが登場したことにより, LSが標準化され, LSPクライエントvim-lspが生まれた. vim-lspはvim8, neovim両方で使えるため人気となった. インターフェースを標準化するのではなく, クライエントを標準化することになったため, インターフェースであるdeoplete.nvimは逆にクライエントごとに合わせる立場となった. その結果deoplete-vim-lspという, vim-lspから得た情報をdeoplete.nvimに渡すためのプラグインが生まれた. そしてneovimではまた別にLanguageClient-neovimというクライエントが生まれたが, このクライエントはdeopleteに標準対応しているため新たなプラグインは必要ない. さらにneovimが標準でLSPクライエントを搭載したため, deoplete.nvimインターフェースに情報を渡すためにdeoplete-lspが生まれた. deoplete.nvimとはあくまでもneovimの補完インターフェースなのだ. vim-lspと並列する存在ではない.
+<p> vim-lspはneovimやvim8で使える. ただインターフェースが標準的でなくなったため各自色々集める必要があるが, 有名なのはasyncomplete.vim + asyncomplete-lsp.vim を使う組み合わせだったりする. asyncomplete.vimはdeoplete.nvimのような立ち位置であり, vim-lspから情報を得るために, asyncomplete-lsp.vimが必要となる. asyncomplete-lsp.vimはdeopleteにおけるdeoplete-vim-lspのような立ち位置である.
+<p> <a href="https://qiita.com/lighttiger2505/items/3065164798bc9cd615d4">NeovimでモダンなPython環境を構築するv2(LSPを添えて)</a> を参考に以下のテーブルを作成した. vimのLSPの解説としては最もわかりやすい. vimのLSPを語るにおいて, neovimは必ず言及されるべきだろう. ともかく, このサイトのテーブルを参考にすると以下のようなプラグインの関係がある.
+<table border>
+  <tr>
+    <th>LSPクライエント</th>
+    <th>&lt-橋渡し&gt</th>
+    <th>補完機能のインターフェース</th>
+  </tr>
+  <tr>
+    <td>vim-lsp</td>
+    <td>asyncomplete-lsp.vim</td>
+    <td>asyncomplete.vim</td>
+  </tr>
+  <tr>
+    <td>vim-lsp</td>
+    <td>deoplete-vim-lsp</td>
+    <td>deoplete.nvim</td>
+  </tr>
+  <tr>
+    <td>coc.nvim</td>
+    <td>必要なし</td>
+    <td>coc.nvim</td>
+  </tr>
+  <tr>
+    <td>LanguageClient-neovim</td>
+    <td>必要なし</td>
+    <td>deoplete.nvim</td>
+  </tr>
+  <tr>
+    <td>neovimのビルトインLSP</td>
+    <td>deoplete-lsp</td>
+    <td>deoplete.nvim</td>
+  </tr>
+</table>
+
+<h2>vim-lspの導入</h2>
+<p> ともかく, vim-lspをインストールしたら次のような設定を書く.
+<p> vim-lspには使うサーバーを登録しなくてはならない. ともかく, <a href="https://github.com/prabirshrestha/vim-lsp/wiki/Servers">https://github.com/prabirshrestha/vim-lsp/wiki/Servers</a> の指示に従えば良いが, ここでは解説もいれる. 例えばGo言語のgoplsというLSPサーバーを登録する場合次のように書く. もちろん, goplsはvim-lspとは別にインストールしなくてはならないが, これも簡単にできる. 一般の言語は<a href="https://github.com/prabirshrestha/vim-lsp/wiki/Servers">https://github.com/prabirshrestha/vim-lsp/wiki/Servers</a>を参照すれば大体良いが, 少し内容が古いので参考程度にすること. 
+<pre>
+<code>
+if executable('gopls')
+    au User lsp_setup call lsp#register_server({
+        \ 'name': 'gopls',
+        \ 'cmd': {server_info-&gt['gopls']},
+        \ 'allowlist': ['go'],
+        \ })
+    autocmd BufWritePre *.go LspDocumentFormatSync
+endif
+</code>
+</pre>
+
+<p> vimscriptの基本的な構文ではあるが, au はautocmdの略で,  この場合lsp_setupコマンドを定義している.  このように au User {コマンド名} call {プラグイン固有の関数(なんらかの設定)} というような形式はよく見るので, 実際にはなんらかの設定の部分だけ気にすれば良い. このコマンドはvim-lspがenabledとなったときに呼ばれる. 'cmd'キーには関数か配列を対応させる. 関数の場合はserver_infoを引数として, executableを返す関数を渡す. 配列の場合は, 実行コマンドと引数を渡す. 結局のところは['']の中身を変えればいいだけ. allowlistは古い記事ではwhitelistとなっていることが多い. 元々whitelistだったのがallowlist, blacklistがblocklistに変わってしまった. autocmd BufWritePre *.go LspDocumentFormatSync とは, .goという拡張子のファイルを開いている場合のみ, BufWritePreイベント, つまり保存時にこのコマンドを発動し, 整形するが動作が重いという評判がある.
+
+<p> 具体的にコマンドの割り当てなどを設定する. この設定はバッファーでvim-lspが有効になっているとき, つまり開いているファイルの拡張子に当てはまるような登録したサーバーがある場合に適用される. signcolumnというのは, これを有効にすると左の1列はsign、つまり警告サインやエラーサインなどを表示するために使われる. 警告はW(Warning), エラーはXというサインになっている.
+<pre>
+<code>
+function! s:on_lsp_buffer_enabled() abort
+    setlocal omnifunc=lsp#complete
+    setlocal signcolumn=yes
+    if exists('+tagfunc') | setlocal tagfunc=lsp#tagfunc | endif
+    nmap &ltbuffer&gt gd &ltplug&gt(lsp-definition)
+    nmap &ltbuffer&gt gr &ltplug&gt(lsp-references)
+    nmap &ltbuffer&gt gi &ltplug&gt(lsp-implementation)
+    nmap &ltbuffer&gt gt &ltplug&gt(lsp-type-definition)
+    nmap &ltbuffer&gt &ltleader&gtrn &ltplug&gt(lsp-rename)
+    nmap &ltbuffer&gt [g &ltPlug&gt(lsp-previous-diagnostic)
+    nmap &ltbuffer&gt ]g &ltPlug&gt(lsp-next-diagnostic)
+    nmap &ltbuffer&gt K &ltplug&gt(lsp-hover)
+
+    let g:lsp_format_sync_timeout = 1000
+    autocmd! BufWritePre *.rs,*.go call execute('LspDocumentFormatSync')
+    
+    " refer to doc to add more commands
+endfunction
+
+augroup lsp_install
+    au!
+    " call s:on_lsp_buffer_enabled only for languages that has the server registered.
+    autocmd User lsp_buffer_enabled call s:on_lsp_buffer_enabled()
+augroup END
+</code>
+</pre>
+
+<p> 基本的にデフォルトで十分なのであまりオプションの値を設定することはないが, 次のようなオプションがある.
+<p> g:lsp_diagnostics_signs_enabled : サインを表示する. デフォルトは1. 古い記事だとlsp_signs_enabledのようにオプション名にdiagnosticsが入っていないものが多いので注意しよう.
+<p> g:lsp_diagnostics_virtual_text_insert_mode_enabled : エラーや警告の内容は該当箇所の右側に表示され, これをvirtual textという. 挿入モードでも表示するかというオプションであり, デフォルトでは0となっている. 挿入モードでは表示されなくなるが, これは編集中は一時的にエラーになるのは当たり前なので, 表示が鬱陶しくなることも多い.
+<p> g:lsp_diagnostics_echo_cursor : よくわからない.デフォルトは0. 
+<p> &ltPlug&gtについては<a href="https://qiita.com/domodomodomo/items/043e1f8d0f2a08ad0c53">Vim の &ltPlug&gt ってなんだ？</a> を読むとよくわかる.
+<h2>vim-lsp周辺のプラグイン</h2>
+<p> <a href="https://qiita.com/kitagry/items/216c2cf0066ff046d200">vim-lspでできること</a> でvim-lspのコマンドの機能がよくわかる.  vim-lspはあくまでもクライエントであって, LSPの一部の機能しかインターフェースとして実装していない. vim-lspだけでは定義ジャンプやエラー, 警告表示などはできるが, 補完機能がないというように. 実はこれは意図的にそうしている. 補完機能がvim-lspに標準搭載されていない理由は, 補完機能のインターフェースをLSPサーバーを実装するまでもない簡易的な言語(アセンブリや, cmake, make)などに対しても使えるようにするためだ. 例えばdeoplete.nvimはLSP以外のインターフェースとしても使える, というか元々そうだった. asyncompleteもLSP以外のLS(Language Source)から情報を受け取れるインターフェースとなっている. vim-lspがインターフェースとして実装していないLSPの機能は別のインターフェースを対応させる必要がある. 具体的に, LSPのどの機能をvim-lspがインターフェースとして標準実装してどの機能を別のインターフェースに任せるのかは次の表のようになる. 
+
+<table border>
+  <tr>
+    <th>vim-lspのクライエント機能</th>
+    <th>&lt-橋渡し-&gt</th>
+    <th>インターフェースとして使うプラグインの例</th>
+  </tr>
+  <tr>
+    <td>定義ジャンプ</td>
+    <td>必要なし</td>
+    <td>必要なし</td>
+  </tr>
+  <tr>
+    <td>エラー, 警告診断</td>
+    <td>必要なし</td>
+    <td>必要なし</td>
+  </tr>
+  <tr>
+    <td rowspan="2">補完</td>
+    <td>asyncomplete-lsp.vim</td>
+    <td>asyncomplete.vim</td>
+  </tr>
+  <tr>
+    <td>deoplete-vim-lsp</td>
+    <td>deoplete.nvim</td>
+  </tr>
+  <tr>
+    <td rowspan="3">スニペット</td>
+    <td>vim-vsnip-integ</td>
+    <td>vim-vsnip</td>
+  </tr>
+  <tr>
+    <td>vim-lsp-ultisnips</td>
+    <td>UltiSnips</td>
+  </tr>
+  <tr>
+    <td>vim-lsp-neosnippet</td>
+    <td>neosnippet.vim</td>
+  </tr>
+  <tr>
+    <td>折り畳み(Folding)</td>
+    <td>必要なし</td>
+    <td>必要なし</td>
+  </tr>
+</table>
+<p> 各自好きなインターフェースを選んで, プラグインとその橋渡しのプラグインをインストールするだけで大体すむ.
+</body>
+</html>

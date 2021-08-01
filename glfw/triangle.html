@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>三角形描画</title>
+<meta http-equive="content-type" charset="utf-8">
+<link rel="stylesheet" href="/css/hljs.css">
+<link rel="icon" href="/img/favicon.ico">
+</head>
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/tomorrow-night-blue.min.css">
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/highlight.min.js"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+<body>
+<p><a href="./">戻る</a>
+<h1>三角形描画</h1>
+<p> June 25, 2020
+<p> 三角形を書くというよりは, openglの処理の流れの全体像を見ていくというのが目的だ. 流れは以下.
+<ul>
+  <li>glfwInitで開始</li>
+  <li>glfwWindowHintでバージョンやコンテクスト指定</li>
+  <li>glfwCreateWindowでWindow生成</li>
+  <li>glfwMakeContextCurrentでwindowをコンテクストカレントにする</li>
+  <li>glfwSetFrameBufferSizeCallbackでwindowがリサイズされた時の処理を指定</li>
+  <li>gladLoadGLLoaderでopenglの関数をロード</li>
+
+  <li>glCreateShader(GL_VERTEX_SHADER)でvertex shader作成</li>
+  <li>glShaderSourceでvertex shaderのソース読み込み</li>
+  <li>glCompileShaderでvertex shaderコンパイル</li>
+  <li>glGetShaderivでコンパイル情報取得</li>
+  <li>glCreateShader(GL_FRAGMENT_SHADER)でfragment shader作成</li>
+  <li>glShaderSourceでfragment shaderのソース読み込み</li>
+  <li>glCompileShaderでfragment shaderコンパイル</li>
+  <li>glGetShaderivでコンパイル情報取得</li>
+  <li>glCreateProgramでshader program作成</li>
+  <li>glAttachShaderでshader programにvertex shader, fragment shaderを登録</li>
+  <li>glLinkProgramでshader programと登録したshaderをリンク</li>
+  <li>glGetProgramivでリンク情報取得</li>
+  <li>glDeleteShaderでvertex shader, fragment shaderを破棄</li>
+  <li>glGenVertexArraysでVAO(Vertex Array Object)生成</li>
+  <li>glGenBuffersでVBO(Vertex Buffer Object)生成</li>
+  <li>glBindVertexArrayでVAO指定</li>
+  <li>glBindBufferでGL_ARRAY_BUFFERのVBO指定</li>
+  <li>glBufferDataでvertexデータをGL_ARRAY_BUFFERに送る</li>
+  <li>glVertexAttribPointerでGL_ARRAY_BUFFERが読み込むデータの解釈を決める</li>
+  <li>glEnableVertexAttribArrayで指定したインデックスを作動</li>
+  <li>glBindBuffer(GL_ARRAY_BUFFER,0)でGL_ARRAY_BUFFERからVBOをunbind</li>
+  <li>glBindVertexArray(0)でVAOをunbind</li>
+
+  <li>glfwWindowShouldCloseがfalseならばメインループ続行</li>
+  <li>入力処理</li>
+  <li>glClearColorでglClearの初期化色を指定</li>
+  <li>glClearでバッファ初期化</li>
+  <li>glUseProgramでshader programを指定</li>
+  <li>glBindVertexArrayでVAOを指定</li>
+  <li>glDrawArraysで三角形描画</li>
+  <li>glfwSwapBuffersで描画したバッファを反映</li>
+  <li>glfwPollEventsでイベント記録</li>
+
+  <li>glDeleteVertexArraysでVAO破棄</li>
+  <li>glDeleteBuffersでVBO破棄</li>
+  <li>glDeleteProgramでshader program破棄</li>
+  
+</ul>
+
+<p>int glfwinit(void)
+<p>glfwを初期化, 成功時にGL_TRUE(=1), 失敗時にGL_FALSE(=0)を返す.
+<p>GLFWwindow *glfwCreateWindow(int width, int heightk, const char *title, GLFWmonitor *monitor, GLFWwindow *share)
+<ul>
+  <li>width: 作成するウィンドウの横幅の画素数, 1以上</li>
+  <li>height: 作成するウィンドウの高さの画素数, 1以上</li>
+  <li>title: 作成するウィンドウのタイトルバーに表示する文字列</li>
+  <li>monitor: フルスクリーンモードの時に表示するモニタを指定, フルスクリーンでなければNULL</li>
+  <li>share: 他のウィンドウハンドルを指定すればね そのウィンドウとリソース(テクスチャなど)を共有する. </li>
+</ul>
+<p> void glfwMakeContextCurrent(GLFWwindow *const window)
+<p> ウィンドウのレンダリングコンテクストをカレントにする. *のあとのconstはポインタ自体がconstというだけで参照先がconstというわけではない. 
+<p> glfwMakeColor(GLfloat R, GLfloat G, GLfloat B, GLfloat A);
+<p> それぞれ0-1のレンジ. Aは不透明度, 0で透明, 1で不透明.
+
+<p> 描画ループの説明に入る. glfwWindowShouldClose()でウィンドウが閉じるべきかをイベントから判断する. glClear()でバッファを消去する. 描画の処理をし, glfwSwapBuffer()で初めてディスプレイ上に描画が反映される. このように表示バッファと内部の描画処理のバッファの二つがありこれをダブルバッファリングという. イベント駆動の場合はglfwWaitEvents()で待機, 時間経過で動く場合はglfwPollEvents()関数を用いる. 
+<p> glClear(GLbitfield mask)
+<p> maskには塗り潰すバッファを指定する. GL_COLOR_BUFFER_BITの場合カラーバッファのみをクリアする.
+<p> glfwSwapBuffers(GLFWindow *const window)
+<p> windowに指定したウィンドウのカラーバッファを入れ替える.
+<p> glfwWaitEvents(void) イベント発生を待つ. メインループ以外では実行すべきではない. タイムアウト付きのglfwWaitEventsTimeout(double sec)もある.
+<p> void glfwPollEvents(void) マウス操作などのイベントを取り出し, それを記録する. 
+<p> void glfwTerminate(void)
+<p> GLFWの終了処理を行う. 
+<p> void glfwSwapInterval(int interval)
+<p> カラーバッファ入れ替えで待つV-Syncの最小回数
+
+<h2>OpenGLのデータ型</h2>
+<p> C++の型は処理系依存のものが多いので統一的な扱いをするためにライブラリ側が型を用意する事はよくある事だ. これで処理が重くなる事は全くないので積極的に使うことができる. 
+
+<table border>
+<tr>
+<th>OpenGLのデータ型</th>
+<th>最小ビット数</th>
+<th>説明</th>
+</tr>
+<tr>
+<td>GLboolean</td>
+<td>1</td>
+<td>論理値</td>
+</tr>
+<tr>
+<td>GLbyte</td>
+<td>8</td>
+<td></td>
+</tr>
+<tr>
+<td>GLubyte</td>
+<td>8</td>
+<td></td>
+</tr>
+<tr>
+<td>GLchar</td>
+<td>8</td>
+<td></td>
+</tr>
+<tr>
+<td>GLshort</td>
+<td>16</td>
+<td></td>
+</tr>
+<tr>
+<td>GLushort</td>
+<td>16</td>
+<td></td>
+</tr>
+<tr>
+<td>GLint</td>
+<td>32</td>
+<td></td>
+</tr>
+<tr>
+<td>GLuint</td>
+<td>32</td>
+<td></td>
+</tr>
+<tr>
+<td>GLint64</td>
+<td>64</td>
+<td></td>
+</tr>
+<tr>
+<td>GLuint64</td>
+<td>64</td>
+<td></td>
+</tr>
+<tr>
+<td>GLfloat</td>
+<td>32</td>
+<td></td>
+</tr>
+<tr>
+<td>GLdouble</td>
+<td>64</td>
+<td></td>
+</tr>
+<tr>
+<td>GLintptr</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>GLsizeptr</td>
+<td>32</td>
+<td></td>
+</tr>
+<tr>
+<td>GLint</td>
+<td>32</td>
+<td></td>
+</tr>
+</table>
+</body>
+</html>

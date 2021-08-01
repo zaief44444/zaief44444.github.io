@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>ARM7TDMIについて</title>
+<meta http-equive="content-type" charset="utf-8">
+<link rel="icon" href="/img/favicon.ico">
+<link rel="stylesheet" href="/css/simple.css">
+</head>
+<body>
+<p><a href="./">戻る</a>
+<h1>ARM7TDMIについて</h1>
+<p>Apr 3, 2020</p>
+<p>ARM7TDMIはGBAで使われているCPUのコアだがあまり情報が出回っていない部分がある.
+特に割り込みの動作については質の良い情報がなかなか得られないのでここで詳しく解説したい.</p>
+<h2>ARMのレジスター</h2>
+ARMのレジスターは37個ありどれも32bitである. 31個は一般レジスター(Rxx)で6個はステータスレジスター(xPSR)である. レジスターによってモードごとにバンクされたりする. 
+
+<table border>
+  <tr>
+    <th>System/User</th>
+    <th>FIQ</th>
+    <th>Supervisor</th>
+    <th>Abort</th>
+    <th>IRQ</th>
+    <th>Undefined</th>
+  </tr>
+<tr>
+<td>R0</td>
+<td>R0</td>
+<td>R0</td>
+<td>R0</td>
+<td>R0</td>
+<td>R0</td>
+</tr>
+<tr>
+<td>R1</td>
+<td>R1</td>
+<td>R1</td>
+<td>R1</td>
+<td>R1</td>
+<td>R1</td>
+</tr>
+<tr>
+<td>R2</td>
+<td>R2</td>
+<td>R2</td>
+<td>R2</td>
+<td>R2</td>
+<td>R2</td>
+</tr>
+<tr>
+<td>R3</td>
+<td>R3</td>
+<td>R3</td>
+<td>R3</td>
+<td>R3</td>
+<td>R3</td>
+</tr>
+<tr>
+<td>R4</td>
+<td>R4</td>
+<td>R4</td>
+<td>R4</td>
+<td>R4</td>
+<td>R4</td>
+</tr>
+<tr>
+<td>R5</td>
+<td>R5</td>
+<td>R5</td>
+<td>R5</td>
+<td>R5</td>
+<td>R5</td>
+</tr>
+<tr>
+<td>R6</td>
+<td>R6</td>
+<td>R6</td>
+<td>R6</td>
+<td>R6</td>
+<td>R6</td>
+</tr>
+<tr>
+<td>R7</td>
+<td>R7</td>
+<td>R7</td>
+<td>R7</td>
+<td>R7</td>
+<td>R7</td>
+</tr>
+<tr>
+<td>R8</td>
+<td>R8_fiq</td>
+<td>R8</td>
+<td>R8</td>
+<td>R8</td>
+<td>R8</td>
+</tr>
+<tr>
+<td>R9</td>
+<td>R9_fiq</td>
+<td>R9</td>
+<td>R9</td>
+<td>R9</td>
+<td>R9</td>
+</tr>
+<tr>
+<td>R10</td>
+<td>R10_fiq</td>
+<td>R10</td>
+<td>R10</td>
+<td>R10</td>
+<td>R10</td>
+</tr>
+<tr>
+<td>R11</td>
+<td>R11_fiq</td>
+<td>R11</td>
+<td>R11</td>
+<td>R11</td>
+<td>R11</td>
+</tr>
+<tr>
+<td>R12</td>
+<td>R12_fiq</td>
+<td>R12</td>
+<td>R12</td>
+<td>R12</td>
+<td>R12</td>
+</tr>
+<tr>
+<td>R13</td>
+<td>R13_fiq</td>
+<td>R13_svc</td>
+<td>R13_abt</td>
+<td>R13_irq</td>
+<td>R13_und</td>
+</tr>
+<tr>
+<td>R14</td>
+<td>R14_fiq</td>
+<td>R14_svc</td>
+<td>R14_abt</td>
+<td>R14_irq</td>
+<td>R14_und</td>
+</tr>
+<tr>
+<td>R15</td>
+<td>R15</td>
+<td>R15</td>
+<td>R15</td>
+<td>R15</td>
+<td>R15</td>
+</tr>
+<tr>
+<td>CPSR</td>
+<td>CPSR</td>
+<td>CPSR</td>
+<td>CPSR</td>
+<td>CPSR</td>
+<td>CPSR</td>
+</tr>
+<tr>
+<td>--</td>
+<td>SPSR_fiq</td>
+<td>SPSR_svc</td>
+<td>SPSR_abt</td>
+<td>SPSR_irq</td>
+<td>SPSR_und</td>
+</tr>
+</table>
+
+<p>
+R13はSP(スタックポインター)として使われる(Thumb state). ARM stateでは普通のレジスタとして使って良い. 例外処理時にはバンクレジスターのR13_xxxに値が入るので元のSPにアクセスできないことに注意. R14はリンクレジスターでBLを呼び出す時に変更される. R15はPC(プログラムカウンター)として使われる. 
+</p>
+
+<h2>ARM CPU Flags & Condition Field(cond)</h2>
+<p>条件実行で使われる. 例, Zフラグが1の時のみbeqでジャンプ, 0の時のみbneでジャンプするなど. thumbではフラグはジャンプ命令でしか使わないはず.
+</p>
+<h3>Current Program Status Register (CPSR)</h3>
+
+<table border>
+<tr>
+<th>Bit</th>
+<th>Expl.</th>
+<th>説明</th>
+</tr>
+<tr>
+<td>31</td>
+<td>N : Sign Flag</td>
+<td>Signedの時セット</td>
+</tr>
+<tr>
+<td>30</td>
+<td>Z : Zero Flag</td>
+<td>結果がZeroの時セット</td>
+</tr>
+<tr>
+<td>29</td>
+<td>C : Carry Flag</td>
+<td>繰り上がり時, 繰り下がりなし時にセット</td>
+</tr>
+<tr>
+<td>28</td>
+<td>V : Overflow Flag</td>
+<td>オーバーフロー時にセット</td>
+</tr>
+<tr>
+<td>27</td>
+<td>Q : Sticky Overflow</td>
+<td>? ARMv5TE以降でしか使わない</td>
+</tr>
+<tr>
+<td>26-8</td>
+<td>Reserved</td>
+<td>For future use</td>
+</tr>
+<tr>
+<td>7</td>
+<td>I : IRQ disable</td>
+<td>IRQ禁止時にセット</td>
+</tr>
+<tr>
+<td>6</td>
+<td>F : FIQ disable</td>
+<td>FIQ禁止時にセット</td>
+</tr>
+<tr>
+<td>5</td>
+<td>T : State Bit</td>
+<td>0=ARM, 1=Thumb</td>
+</tr>
+<tr>
+<td>4-0</td>
+<td>M4-M0 : Mode Bits</td>
+<td>下記を参照</td>
+</tr>
+</table>
+<h3>Bit7-0 (Controll Bits,I,F,T,M4-M0)について</h3>
+<p>
+privileged modeの時に値を操作しても良い. Tビットは値を勝手に操作してはいけず, bx命令を使って切り替えること. M4-M0の値に対応するテーブル
+</p>
+
+<table border>
+  <tr>
+    <th>Hex</th>
+    <th>Expl.</th>
+  </tr>
+  <tr>
+    <td>10h</td>
+    <td>User</td>
+  </tr>
+  <tr>
+    <td>11h</td>
+    <td>FIQ</td>
+  </tr>
+  <tr>
+    <td>12h</td>
+    <td>IRQ</td>
+  </tr>
+  <tr>
+    <td>13h</td>
+    <td>Supervisor (SWI)</td>
+  </tr>
+  <tr>
+    <td>17h</td>
+    <td>Abort</td>
+  </tr>
+  <tr>
+    <td>18h</td>
+    <td>Undefined</td>
+  </tr>
+  <tr>
+    <td>1Fh</td>
+    <td>System</td>
+  </tr>
+</table>
+
+<h3>Saved Program Status Registers (SPSR_(mode))</h3>
+SPSRはCPSRの値を一時的に保存する役割があり, 例えるとPCに対するLRに相当する. 例外処理時に元のCPSRの値を入れ, 復帰時にCPSRに入れ直すことができる. 割り込みが入れ子になっている場合は手動で別に管理しなくてはならない.
+<h2>例外処理</h2>
+<p>そもそも割り込みとは例外処理の一つであるが他の例外も割り込みと呼ばれたりする. 例外が起きた時CPUはARMモードになりPCは例外に応じた例外ベクトルのアドレスを読み込む.
+</p>
+<h3>例外ベクトル</h3>
+<table border>
+<tr>
+<th>アドレス</th>
+<th>優先順位</th>
+<th>例外</th>
+<th>モード</th>
+<th>割り込みフラグ</th>
+</tr>
+<tr>
+<td>BASE+00h</td>
+<td>1</td>
+<td>Reset</td>
+<td>Supervisor(_svc)</td>
+<td>I=1, F=1</td>
+</tr>
+<tr>
+<td>BASE+04h</td>
+<td>7</td>
+<td>Undefined Instruction</td>
+<td>Undefined(_und)</td>
+<td>I=1, F=unchanged</td>
+</tr>
+<tr>
+<td>BASE+08h</td>
+<td>6</td>
+<td>Software Interrupt(SWI)</td>
+<td>SuperVisor(_svc)</td>
+<td>I=1, F=unchanged</td>
+</tr>
+<tr>
+<td>BASE+0Ch</td>
+<td>5</td>
+<td>Prefetch Abort</td>
+<td>Abort(_abt)</td>
+<td>I=1, F=unchanged</td>
+</tr>
+<tr>
+<td>BASE+10h</td>
+<td>2</td>
+<td>Data Abort</td>
+<td>Abort(_abt)</td>
+<td>I=1, F=unchanged</td>
+</tr>
+<tr>
+<td>BASE+14h</td>
+<td>??</td>
+<td>Address Exceeds 26bit</td>
+<td>Supervisor(_svc)</td>
+<td>I=1, F=unchanged</td>
+</tr>
+<tr>
+<td>BASE+18h</td>
+<td>4</td>
+<td>IRQ</td>
+<td>IRQ(_irq)</td>
+<td>I=1, F=changed</td>
+</tr>
+<tr>
+<td>BASE+1Ch</td>
+<td>3</td>
+<td>FIQ</td>
+<td>FIQ(_fiq)</td>
+<td>I=1, F=1</td>
+</tr>
+</table>
+<h3>例外処理に入る時に実行される命令</h3>
+<pre>
+<code>
+R14_(new mode)=PC+nn ;save old PC, ie. return address
+SPSR_(new mode)=CPSR ;save old flags
+CPSR new T,M bits    ;set to T=0 (ARM state), and M4-0=new mode
+CPSR new I bit       ;IRQs disabled (I=1), done by ALL exceptions
+CPSR new F bit       ;FIQs disabled (F=1), done by Reset and FIQ only
+</code>
+</pre>
+<p>
+上のPC+nnは例外によって異なる. 
+</p>
+<h3>例外から戻る時に必要な実行手順</h3>
+<p>
+レジスタR0からR14までの中で例外処理に使われたものを元に戻す. 
+そして例外に応じたリターン処理を実行してPCとCPSRを元に戻す, この時CPU state(Thumb or ARM)やFIQ, IRQ disable フラグも戻される. 
+</p>
+<p>
+注意: リターンアドレスはARM-styleで記述される. ARM stateから入ったのかThumb stateから入ったのかによらずに処理するため.
+</p>
+<h3>FIQ (Fast Interrupt Request)</h3>
+<p>
+一般のバンクレジスタ(R13_fiq, R14_fiq)の他に, さらに5つのバンクレジスタ(R8_fiq-R12_fiq)を持つ. 
+バンクレジスタをもつレジスタは元の値をスタックに保存する処理が省ける.
+privileged mode (non-user mode)では, FIQはCPSRの F bit をセットすることで禁止できる.
+</p>
+<h3>IRQ (Normal Interrupt Request)</h3>
+<p>
+FIQと違いIRQはバンクレジスタを持たない. FIQよりも優先順位が低く, FIQ例外が実行されているときはIRQは禁止されている. priviledged(non-user mode)では, IRQはCPSRの I bit をセットすることで禁止できる.
+</p>
+<p>IRQからのリターン処理:</p>
+<code>SUBS PC,R14,4    ;both PC=R14_irq-4, and CPSR=SPSR_irq</code>
+
+<h3>Software Intrrupt(SWI)</h3>
+<p>
+swi命令から呼び出される. swi処理は他の例外と同様ARM stateで実行される
+</p>
+<p>リターン処理:</p>
+<code>MOVS PC,R14   ;both PC=R14_svc, and CPSR=SPSR_svc</code>
+
+<h3>Undifined Instruction Exception</h3>
+<p>CPUが実行できない命令に当たった時に送られる. </p>
+<p>リターン処理:</p>
+<code>MOVS PC,R14   ;both PC=R14_und, and CPSR=SPSR_und</code>
+
+<h3>Abort</h3>
+<p>
+GBAでは使われないが仮想メモリシステムで使われる, 詳細略.
+</p>
+
+  <h3>Reset</h3>
+PC=VVVV0000hとなりCPSRのT bit = 0(ARM state), F=1, I=1(disable FIQ and IRQ), M4-0=10011bとなる.(Supervisor mode)
+  </body>
+  </html>

@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>IRC記事</title>
+<meta http-equive="content-type" charset="utf-8">
+<link rel="icon" href="/img/favicon.ico">
+<link rel="stylesheet" href="/css/simple.css">
+</head>
+<body>
+<p><a href="../">戻る</a>
+<h1>IRC記事</h1>
+<p> Mar 1, 2020
+<p> IRCについての情報を個人的にまとめる. IRC(Internet Relay Chat)はテキストベースコミュニケーションのプロトコルだ. プロトコルとはhttpやsshといった通信の方法の規格を表す言葉であり, httpプロトコルだとかsshプロトコルとか特に規格を強調するときに呼んだりする. IRCのメリットは何と言っても柔軟性で, プラグインの開発がしやすくCLIでの操作に向いている. IRCはあくまでもプロトコルだからIRCクライエントは自由に選べる. ここではIRCクライエントとしてCLI環境向けの一番強力なweechatを使ってIRCを利用する方法を述べたい. 
+
+<h2>諸概念</h2>
+<p> チャンネル: 実際にチャットを行う場所. #チャンネル名 のように表記することが多い.
+<p> サーバー(ホスト): 世界中にIRCのためのサーバーがあり, もちろん日本にもある. サーバーはいくつかのチャンネルを持つ. ユーザーが好きなチャンネルを開設することもできる. サーバーによってチャンネルで扱う話題はある程度は決められている. サーバーをネットワークということも多い.  なぜならサーバーがいくつも連携して一つのネットワークをなすことが多いから. この場合ユーザーには一つの接続先に見えても裏では振り分けられてサーバーが分散している. 
+<p> bouncer: IRCクライエントからIRCサーバーへ直接繋ぐのではなくリモートサーバーを仲介してIRCサーバーへ繋ぐ方がログを管理できたりセキュリティの面で有利だったりする. この役割を持つリモートサーバーをbouncerという. zncを使えば簡単にbouncerを構成できる. 最近は <a href="https://www.reddit.com/r/irc/comments/fech68/how_is_quassel_core_different_from_znc/">https://www.reddit.com/r/irc/comments/fech68/how_is_quassel_core_different_from_znc/</a> によるとQuassel Coreも良いらしいが情報は少なめ.
+
+<h2>Contents</h2>
+<ul>
+<li><a href="weechat">weechat解説</a></li>
+<li><a href="znc">ZNC解説</a> weechat-&gtznc-&gtfreenodeという例で解説する. </li>
+</ul>
+</body>
+</html>

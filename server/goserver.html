@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>NginxとGoのWebsocketの連携</title>
+<meta http-equive="content-type" charset="utf-8">
+<link rel="icon" href="/img/favicon.ico">
+<link rel="stylesheet" href="/css/simple.css">
+</head>
+<body>
+<p><a href="./">戻る</a>
+<h1>NginxとGoのWebSocketの連携</h1>
+<p> Webサーバーの環境構築は十人十色なところもあるため慣れていないと難しい. 今回GoアプリケーションをNginxから呼び出すための環境構築について説明する.
+<h2>Nginxの設定</h2>
+<p> /etc/nginx/nginx.confの一部を次のように編集する. fastcgi_passでローカルの適当なポートを通してGoアプリケーションに接続する. 今回9000としたが, 空いてそうなポートならなんでも良い. 余力がある人は, proxy_passをtcpポートではなくunixドメインソケットでする方法も調べてみよう. そちらの方が推奨されていると思う. さて, WebSocketを使うにはヘッダーにUpgradeをセットすることでWebSocketを使うことを明示する必要がある.
+<pre>
+<code>
+    location /chat {
+      proxy_pass http://localhost:9000;
+      proxy_set_header Host $host;
+    }
+    location /chat/wss {
+      proxy_pass http://localhost:9000;
+      proxy_set_header Upgrade $http_upgrade;
+      proxy_set_header Connection "Upgrade";
+      proxy_set_header Host $host;
+    }
+</code>
+</pre>
+
+<p>もちろんnginx.conf編集後は再起動を忘れない
+<pre>
+<code>
+systemctl restart nginx
+</code>
+</pre>
+
+<h2>Goの環境構築</h2>
+<p>  今回/usr/local/gocode/をGOPATHとしてアプリケーションを配置しする.次のように配置している. binに実行ファイル, src/ドメイン名/パッケージ名/にソースコードをいれる. chatディレクトリにはgorilla/websocketのchat exampleを入れる.
+
+<pre>
+<code>
+/usr/local
+├── gocode
+│   ├── bin
+│   │   └── chat
+│   └── src
+│       └── hogehoge.com
+│           └── chat
+│               └── main.goなど
+</code>
+</pre>
+
+<p> さて, /usr/localは通常rootユーザーが所有権を持っており, そこで作成したファイルもその所有権が引き継がれる. gocodeディレクトリを作成した後, 次のコマンドで所有権を変更する. goのソースコードを実際に編集するのはログインユーザーで行いたいのでそれを指定し, グループはWebサーバーの実行ユーザーのグループを指定すると良いだろう. w権限をWebサーバーにも与えたい時はよくあり, ログインユーザーにも与えたいのでグループにw権限を付与するということが多い. 私の場合ログインユーザー(zaief)をhttpグループにも入れている.
+
+<pre>
+<code>
+chown -R zaief:http gocode
+</code>
+</pre>
+
+<p> GOPATH, PATHを設定する. PATHの設定は今回絶対パスでgoアプリケーションを実行するためいらないが, ログインユーザーで何か呼び出したい時もあるかもしれないので設定する. GOPATHはgo install時などにインストール先を指定するため必要. ログインユーザーのシェルの設定ファイルに書き込む. 私の場合zshを使っているため~/.zshrcを次のように編集した.
+<pre>
+<code>
+export PATH=$PATH:/usr/local/gocode/bin/
+export GOPATH=/usr/local/gocode/
+</code>
+</pre>
+
+<h2>Goアプリケーションを作成</h2>
+<p> main.goには次のように記述した. Nginxがローカルホスト127.0.0.1:9000でアクセスしてくるのでnet.Listen()で応答させるよう設定する. とても簡単な応答をするアプリだ.
+
+<p>websocketの例はどうしても煩雑になってしまうので, gorilla/websocket/のchatのexampleをchatディレクトリにそのまま移す.
+<pre>
+<code>
+</code>
+</pre>
+
+<p> 移したら, go install でGOPATHで指定したディレクトリ/bin/ にビルドしたバイナリが配置される. chatという名前のバイナリができている. go installを実行した場所のディレクトリ名が使われることに注意しよう. 特に, mainという名前のバイナリが作成されるわけではない.
+<pre>
+<code>
+go install
+</code>
+</pre>
+<p> $GOPATH/bin/chat で実行してみよう. nginxで定めたurlからアクセスできるはずだ. 
+
+<h2>アプリケーションの自動起動</h2>
+<p> さて, 先ほど実行したのはログインユーザーなのでログアウトしてしまうとアプリケーションのプロセスは終了してしまう. そこでwebサーバーの実行ユーザーなどにこれを任せてしまいたい. そのためにはsystemdにデーモンを登録する必要がある. 次のようなファイルを作成し, /etc/systemd/system/goserver.serviceとして保存しよう. User = httpが特に重要で, rootユーザー以外のものを選択するのが良い.
+
+<pre>
+<code>
+[Unit]
+Description = hogehoge.com
+
+[Service]
+ExecStart = /usr/local/gocode/bin/chat
+ExecStop = /bin/kill -SIGTERM $MAINPID
+ExecReload = /bin/kill -SIGTERM $MAINPID && /usr/local/gocode/bin/chat
+Restart = always
+User = http
+Type = simple
+
+[Install]
+WantedBy = multi-user.target
+</code>
+</pre>
+
+<p> 作成したら, systemdに登録する.
+<pre>
+<code>
+systemctl daemon-reload
+systemctl enable goserver
+systemctl start goserver
+</code>
+</pre>
+
+<p> これでデーモンとしてアプリケーションを常駐させることができた. これで一通り流れがわかっただろう. nginxを使わずgo単体でwebサーバーとして機能させる解説が多いが今回nginxと連携ができより実用性のあるものとなっている.
+</body>
+</html>

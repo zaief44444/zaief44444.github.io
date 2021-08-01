@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>bufferの話</title>
+<meta http-equive="content-type" charset="utf-8">
+<link rel="stylesheet" href="/css/hljs.css">
+<link rel="icon" href="/img/favicon.ico">
+</head>
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/tomorrow-night-blue.min.css">
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/highlight.min.js"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+<body>
+<p><a href="./">戻る</a>
+<h1>bufferの話</h1>
+<p> Sep 2, 2020
+<p> Depth bufferというbufferがある. これはZ bufferとも呼ばれている. 座標は3次元だが, xを横, yを縦, zを奥行きと考えることが多い. カメラはz軸のマイナスの方向を向いていると考えることが多いが, 今回は単に符号なしで考える. z bufferは全て0からスタートして, 1つ1つのprimitiveを描画する際に, ピクセルごとにそのprimitive深度とz bufferの値を比較する. これをdepth testと言ったりする. z bufferの深度のほうが深い場合のみprimitiveの方をピクセルに描画し, z bufferの深度をprimitiveの深度に更新する. primitiveの方が深度が深い場合はそのまま. これを繰り返すことで物体の奥行きに即した描画ができる. 
+<p> しかし, 半透明の物体がある場合はこのように単純にはうまくいかない. まず, 不透明な物体は上の手順で描画し, 半透明の物体だけZソート法で奥から描画していく. Zソート法はただ単に奥の物体から描画していく, というだけであるが, どちらが奥なのかというのは定まらない場合もあるので例えばポリゴンを分割して比較しやすくしたりする.
+<p> PS1ではZ bufferがなくZソート法によって描画していた. n64やPS2ではZバッファが用いられている. 
+
+<p> Stencil bufferというbufferがある. stencilとは印刷の版のことだが, 日本では版画が馴染み深いと思う. stencilでは描画したい部分だけを切り取るために使う. 
+
+<p>GL_DRAW_FRAMEBUFFER, GL_READ_FRAMEBUFFERの違いについて. drawは出力先のbufferだが, readは戻ってくるデータであり, 普通はdrawしたものと同じでいいので同じfboを割り当てるが, 出力に補正をさらに描けるとなれば補正後のデータが欲しくなるのかもしれない, がよくわからず. 
+</body>
+</html>

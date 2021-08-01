@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>ctags解説</title>
+<meta http-equive="content-type" charset="utf-8">
+<link rel="icon" href="/img/favicon.ico">
+<link rel="stylesheet" href="/css/simple.css">
+</head>
+<body>
+<p><a href="./">戻る</a>
+<h1>ctags解説</h1>
+<p>Dec 14, 2019
+
+<h2>universal ctags</h2>
+<p>エディターの機能としてジャンプ機能は一つ重要なものである. 久しぶりに見直すときなどに定義を忘れて確認のために移動を手動で行うのは無駄が多い. vimではctagsを使ってタグジャンプができる. 使い方は簡単で <a href="https://maku77.github.io/vim/advanced/tags.html">https://maku77.github.io/vim/advanced/tags.html</a> を参考にすれば大体わかる. .vimrcには次を記述するとよい.
+<pre>
+<code>
+set tags=./tags;$HOME
+nnoremap &ltC-]&gt g&ltC-]&gt
+inoremap &ltC-]&gt g&ltC-]&gt
+</code>
+</pre>
+<p>tagsでなく./tagsと指定するとカレントディレクトリではなく開いているファイルのディレクトリからtagsファイルを探す.
+<br>;$HOMEとすることでホームディレクトリまで遡ってtagsファイルを探してくれる.
+<br>g&ltC-]&gtにすることで候補が複数ある場合は一覧表示してくれる. 元のままだと最初の候補しか見ない.
+
+<p> より柔軟にカスタマイズしたいならば <a href="https://qiita.com/aratana_tamutomo/items/59fb4c377863a385e032">https://qiita.com/aratana_tamutomo/items/59fb4c377863a385e032</a> を参考にするのが良い.
+
+</body>
+</html>

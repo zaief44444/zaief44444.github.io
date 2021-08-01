@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>htmlの高速編集</title>
+<meta http-equive="content-type" charset="utf-8">
+<link rel="icon" href="/img/favicon.ico">
+<link rel="stylesheet" href="/css/simple.css">
+</head>
+<body>
+<p><a href="./">戻る</a>
+<h1>html高速編集</h1>
+<p> July 20, 2020
+<p> webサイトによってはhtmlを手打ちすることは少ないかもしれないので厳密にはhtmlタグの高速編集だが, これに焦点を当てて高速編集する手法を考える. 
+
+<h2>よく使うコマンドをvimrcで管理</h2>
+<p> Leaderキーを2つも消費してしまうのはもったいないが, タグのエスケープはよく使う操作なので空いているならばこれに割り当てるべきかもしれない. 二行目の&gt は&ltgt&gtの間違いではなくこれで正しい.
+
+<pre>
+<code>
+vmap &ltsilent&gt &ltLeader&gt&ltlt&gt :sno/&lt/&amplt/g&ltCR&gt
+vmap &ltsilent&gt &ltLeader&gt&gt :sno/&gt/&ampgt/g&ltCR&gt
+</code>
+</pre>
+<h2>よく使うマクロをvimrcで管理</h2>
+<p> 当然, vimscriptではマクロの登録もできる. マクロをどんどん使ってしまうとマクロが足りなくなりそうだが, Filetypeに応じて設定した方がいいかもしれない. というか, マクロはキーと違ってもっと高度な処理をさせるべきなような気もする.
+<pre>
+<code>
+let @p="\&ltESC&gto&ltpre&gt\n&ltcode&gt\n\n&lt/code&gt\n&lt/pre&gt\&ltESC&gtkk0"
+let @a="\&ltESC&gta&lta href=\"\"&gt&lt/a&gt\&ltESC&gthhhhhh"
+</code>
+</pre>
+<h2>Emmet.vim</h2>
+<p> Emmet.vimはhtml編集において最も重要なプラグインだ. 
+  <a href="https://qiita.com/muran001/items/9ce24525b3285678acc3">VimにEmmet導入して爆速HTMLコーディング</a>
+</body>
+</html>

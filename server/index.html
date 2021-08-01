@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>サーバー記事</title>
+<meta http-equive="content-type" charset="utf-8">
+<link rel="icon" href="/img/favicon.ico">
+<link rel="stylesheet" href="/css/simple.css">
+</head>
+<body>
+<p><a href="../">戻る</a>
+<h1>サーバー記事</h1>
+<p> Jan 28, 2020
+<p> 私はarch linuxで建てたnginxのwebサーバーでこのサイトを運営している. サーバーによって色々違うかもしれないが基本的にこの環境向けに色々まとめる. nginxについても解説しようと思っているが別のページでまとめるかもしれない. sshの設定ではパスワード認証を禁止し電子署名方式にする方法などを解説している. iptables解説ではファイアーウォールとしてiptablesを使いセキュリティを向上させる. nftablesはiptablesよりも新しく, 例えばCentOS8 ではfirewalldをファイアーウォールのラッパーとして使うが, このラッパーの内部ではiptablesではなくnftablesを使っている. Debian10でもiptablesはnftablesへのシンボリックリンクとなっている(厳密には少し違うコマンドで, 4つほどシンボリックリンクで挟んでいる). 
+<h2>Contents</h2>
+<li><a href="ssh">sshの設定</a></li>
+<li><a href="iptables">iptables解説</a></li>
+<!-- <li><a href="nftables">nftables解説</a></li> i-->
+<li><a href="nginx">nginx解説</a> nginxのhttps対応しか解説していない. </li>
+<li><a href="systemd">systemd解説</a>
+<li><a href="permission">ユーザーとグループ, ファイル権限</a></li>
+<li><a href="goserver">NginxとGoのWebSocketの連携</a></li>
+<li><a href="gofastcgi">NginxとGoでFastCGI</a></li>
+<li><a href="mysql">ArchでMySQLの環境構築</a></li>
+
+<!-- <li><a href="backup">サーバーのデータの自動バックアップ</a></li> -->
+</body>
+</html>

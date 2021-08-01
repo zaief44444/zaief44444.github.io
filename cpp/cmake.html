@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Makefile解説</title>
+<meta http-equive="content-type" charset="utf-8">
+<link rel="stylesheet" href="/css/hljs.css">
+<link rel="icon" href="/img/favicon.ico">
+</head>
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/tomorrow-night-blue.min.css">
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/highlight.min.js"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+<body>
+<p><a href="./">戻る</a>
+<h1>CMake解説</h1>
+<p>July 17, 2019
+
+<p> CMakeは実は私自身はあまり使ってこなかったが最近のプロジェクトの多くが特に大規模なものはCMakeを使うのが標準的になっているので当然それを読む必要があるためメモとして.
+<p> <a href="http://bkmts.xsrv.jp/cmake/">http://bkmts.xsrv.jp/cmake/</a> がわかりやすい.
+<p> <a href="https://kamino.hatenablog.com/entry/cmake_tutorial1">https://kamino.hatenablog.com/entry/cmake_tutorial1</a> IDEとの連携についても説明している.
+<p> <a href="https://qiita.com/osamu0329/items/7de2b190df3cfb4ad0ca#%E3%81%AF%E3%81%98%E3%82%81%E3%81%AB">CMake : out-of-sourceビルドで幸せになる</a>
+<p> <a href="https://qiita.com/shohirose/items/45fb49c6b429e8b204ac">CMakeの使い方（その１）</a>
+<p>cmake_minimum_requiredはバージョン指定をするが, バージョンは VERSION 2.8.11でなく2.9のようにやや粗い指定でも良い. 
+<pre>
+<code>
+cmake_minimum_required(VERSION 2.8.11)
+</code>
+</pre>
+
+<p>projectはプロジェクト名. CXXはC++プロジェクト. 単にproject(MyApp)とすることもある. 
+<pre>
+<code>
+project(MyApp CXX)
+</code>
+</pre>
+
+<p>add_executableは生成する実行ファイル名, コンパイルソースコードのパス...を記述. CMAKE_CURRENT_SOURCE_DIRはこのCMakeList.txtが置いてあるパスを示す環境変数.
+<pre>
+<code>
+add_executable(
+    MyApp
+    ${CMAKE_CURRENT_SOURCE_DIR}/main.c
+)
+<code>
+<pre>
+
+<h2>out of source</h2>
+  <p> cmake . というコマンドではそのディレクトリにCMakeCache,txt, CMakeFiles, Makefile, cmake_install.cmakeを生成するが, CMakeLists.txtを書き換えた時に消す必要がある. そこで, buildディレクトリを設ける. これによってbuildディレクトリで生成される.
+<pre>
+<code>
+cd MyApp
+mkdir ./build
+cd ./build
+cmake ..
+make
+<code>
+<pre>
+
+<p> ここら辺はよくわからない. CMAKE_LIBRARY_ARCHITECTURE
+<pre>
+<code>
+if(APPLE)
+    set(CMAKE_LIBRARY_ARCHITECTURE "x86_64-apple-darwin11")
+    set(CMAKE_OSX_ARCHITECTURES "x86_64;")
+    set(CMAKE_OSX_DEPLOYMENT_TARGET "10.9")
+    set(GUI_TYPE MACOSX_BUNDLE)
+endif(APPLE)
+
+if(WIN32)
+    set(CMAKE_LIBRARY_ARCHITECTURE "x86_64-w64-mingw32")
+    set(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} -static-libgcc -static-libstdc++")
+    set(GUI_TYPE WIN32)
+endif(WIN32)
+</code>
+</pre>
+
+<p> CMAKE_CXX_FLAGS では次のようなオプションをいれる. リンクするライブラリやサーチパスなどはここではなく別のフラグなどで指定する.
+<pre>
+<code>
+set ( CMAKE_CXX_FLAGS "-std=c++11 -w -g3 -Wall -O0" )
+</code>
+</pre>
+
+<p> CMAKE_PREFIX_PATH は
+<pre>
+<code>
+set(CMAKE_PREFIX_PATH
+        ${CMAKE_PREFIX_PATH}
+        "${CMAKE_SOURCE_DIR}/contrib/${CMAKE_LIBRARY_ARCHITECTURE}")
+</code>
+</pre>
+
+<p> messageはそのままの意味
+<pre>
+<code>
+message(STATUS "PREFIX PATH: " ${CMAKE_PREFIX_PATH})
+<code>
+<pre>
+
+
+<pre>
+<code>
+set(CMAKE_MODULE_PATH
+        ${CMAKE_MODULE_PATH}
+        ${CMAKE_SOURCE_DIR}/cmake)
+
+<code>
+<pre>
+
+<a href="https://www.rojtberg.net/1481/do-not-use-meson/">Do not use Meson</a>
+<a href="https://cliutils.gitlab.io/modern-cmake/">https://cliutils.gitlab.io/modern-cmake/</a>
+<a href="https://cgold.readthedocs.io/en/latest/">https://cgold.readthedocs.io/en/latest/</a>
+</body>
+</html>

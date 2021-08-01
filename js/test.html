@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>テスト</title>
+<meta http-equive="content-type" charset="utf-8">
+<link rel="icon" href="/img/favicon.ico">
+<link rel="stylesheet" href="/css/simple.css">
+</head>
+<body>
+<p><a href="../">戻る</a>
+<h1>テスト</h1>
+<p> Oct 26, 2020
+
+<SCRIPT TYPE="text/javascript">
+		let now = new Date();
+		document.writeln("<DL>");
+		document.writeln("<DT>現在時刻等の取得");
+		document.writeln("<DD>現在時刻（ toLocaleString ）： " + now.toLocaleString());
+		document.writeln("<DD>現在時刻（UTC）（ toUTCString ）： " + now.toUTCString());
+		document.writeln("<DD>グリニッジ標準時（ toGMTString ）： " + now.toGMTString());
+		document.writeln("<DD>時差（分）（ getTimezoneOffset ）： " + now.getTimezoneOffset());
+		document.writeln("<DD>年（ getYear ）： " + now.getYear());
+		document.writeln("<DD>年（４桁）（ getFullYear ）： " + now.getFullYear());
+		document.writeln("<DD>年（UTC）（ getUTCFullYear ）： " + now.getUTCFullYear());
+		document.writeln("<DD>月（0～11）（ getMonth ）： " + now.getMonth());
+		document.writeln("<DD>月（0～11，UTC）（ getUTCMonth ）： " + now.getUTCMonth());
+		document.writeln("<DD>日（ getDate ）： " + now.getDate());
+		document.writeln("<DD>日（UTC）（ getUTCDate ）： " + now.getUTCDate());
+		document.writeln("<DD>曜日（0：日～6：土）（ getDay ）： " + now.getDay());
+		document.writeln("<DD>曜日（0：日～6：土，UTC）（ getUTCDay ）： " + now.getUTCDay());
+		document.writeln("<DD>時間（ getHours ）： " + now.getHours());
+		document.writeln("<DD>時間（UTC）（ getUTCHours ）： " + now.getUTCHours());
+		document.writeln("<DD>分（ getMinutes ）： " + now.getMinutes());
+		document.writeln("<DD>分（UTC）（ getUTCMinutes ）： " + now.getUTCMinutes());
+		document.writeln("<DD>秒（ getSeconds ）： " + now.getSeconds());
+		document.writeln("<DD>秒（UTC）（ getUTCSeconds ）： " + now.getUTCSeconds());
+		document.writeln("<DD>ミリ秒（ getMilliseconds ）： " + now.getMilliseconds());
+		document.writeln("<DD>ミリ秒（UTC）（ getUTCMilliseconds ）： " + now.getUTCMilliseconds());
+		document.writeln("<DD>経過秒数（ミリ秒）（ getTime ）： " + now.getTime());
+		document.writeln("<DT>指定した時間までの経過秒数");
+		document.writeln("<DD>経過秒数（ミリ秒）（ parse ）： " + Date.parse("2006/2/17:9:36:0"));
+		document.writeln("<DT>時間の設定");
+		now = new Date("jan 1, 2020 12:00:00");
+		document.writeln("<DD>修正前（jan 1, 2020 12:00:00）： " + now.toLocaleString());
+		now.setYear(2001);
+		now.setFullYear(2001);
+		now.setMonth(1);
+		now.setDate(2);
+		now.setHours(13);
+		now.setMinutes(1);
+		now.setSeconds(2);
+		document.writeln("<DD>修正後（feb 2, 2001 13:01:02）： " + now.toLocaleString());
+		now.setUTCFullYear(2001);
+		now.setUTCMonth(1);
+		now.setUTCDate(2);
+		now.setUTCHours(13);
+		now.setUTCMinutes(1);
+		now.setUTCSeconds(2);
+		document.writeln("<DD>修正後（feb 2, 2001 13:01:02，UTC）： " + now.toLocaleString());
+		document.writeln("</DL>");
+	</SCRIPT></BODY>
+  <SCRIPT TYPE="text/javascript">
+		document.writeln("<DL>");
+		document.writeln("<DT>プロパティ");
+		document.writeln("<DD>円周率π（ PI ）： " + Math.PI);
+		document.writeln("<DD>自然対数の底 ｅ（ E ）： " + Math.E);
+		document.writeln("<DD>10 の自然対数値（ LN10 ）： " + Math.LN10);
+		document.writeln("<DD>2 の自然対数値（ LN2 ）： " + Math.LN2);
+		document.writeln("<DD>e の常用対数値（ LOG10E ）： " + Math.LOG10E);
+		document.writeln("<DD>2 を底とする e の対数値（  ）： " + Math.LOG2E);
+		document.writeln("<DD>2 の平方根（ SQRT2 ）： " + Math.SQRT2);
+		document.writeln("<DD>2 の平方根の半分（ SQRT1_2 ）： " + Math.SQRT1_2);
+		document.writeln("<DT>メソッド");
+		document.writeln("<DD>絶対値（ abs ）： -1 の絶対値は " + Math.abs(-1));
+		document.writeln("<DD>四捨五入（ round ）： 1.543 を四捨五入すると " + Math.round(1.543));
+		document.writeln("<DD>最も大きくて近い整数値（ ceil ）： 1.234 の場合は " + Math.ceil(1.234) + "，-1.234 の場合は " + Math.ceil(-1.234));
+		document.writeln("<DD>最も小さくて近い整数値（ floor ）： 1.234 の場合は " + Math.floor(1.234) + "，-1.234 の場合は " + Math.floor(-1.234));
+		document.writeln("<DD>最大値と最小値（ max, min ）： 2 と 3 の内，最大値は " + Math.max(2,3) + "，最小値は " + Math.min(2,3));
+		document.writeln("<DD>正弦（ sin ）： " + (180*Math.asin(0.5)/Math.PI) + " 度の正弦は " + Math.sin(30*Math.PI/180));
+		document.writeln("<DD>余弦（ cos ）： " + (180*Math.acos(0.5)/Math.PI) + " 度の余弦は " + Math.cos(60*Math.PI/180));
+		document.writeln("<DD>正接（ tan ）： " + (180*Math.atan(1.0)/Math.PI) + " 度の正接は " + Math.tan(45*Math.PI/180));
+		document.writeln("<DD>逆正接（ atan2 ）： 原点と点 (2, 1) を結んだ線分が X 軸となす角度は " + (180*Math.atan2(1,2)/Math.PI) + " 度");
+		document.writeln("<DD>指数（ exp ）： exp(1) は " + Math.exp(1));
+		document.writeln("<DD>自然対数（ log ）： log(e) は " + Math.log(Math.E));
+		document.writeln("<DD>平方根（ sqrt ）： 2 の平方根は " + Math.sqrt(2));
+		document.writeln("<DD>べき乗（ pow ）： 2 の 3 乗は " + Math.pow(2,3));
+		document.writeln("<DD>乱数（ random ）： " + Math.random() + "， " + Math.random() + "， " + Math.random());
+		document.writeln("</DL>");
+	</SCRIPT>
+
+  <h1>Number guessing game</h1>
+  <div class="form">
+    <label for="guessField">Enter a guess: </label><input type="text" id="guessField" class="guessField">
+    <input type="submit" value="Submit guess" class="guessSubmit">
+  </div>
+
+  <div class="rusultParas">
+    <p class="guesses"></p>
+    <p class="lastResult"></p>
+    <p class="lowOrHi"></p>
+  </div>
+
+      <script>
+      let randomNumber = Math.floor(Math.random() * 100) + 1;
+      const guesses = document.querySelector('.guesses');
+      const lastResult = document.querySelector('.lastResult');
+      const lowOrHi = document.querySelector('.lowOrHi');
+      const guessSubmit = document.querySelector('.guessSubmit');
+      const guessField = document.querySelector('.guessField');
+      let guessCount = 1;
+      let resetButton;
+
+      function checkGuess() {
+        let userGuess = Number(guessField.value);
+        if (guessCount === 1) {
+          guesses.textContent = 'Previous guesses: ';
+        }
+
+        guesses.textContent += userGuess + ' ';
+
+        if (userGuess === randomNumber) {
+          lastResult.textContent = 'Congratulations! You got it right!';
+          lastResult.style.backgroundColor = 'green';
+          lowOrHi.textContent = '';
+          setGameOver();
+        } else if (guessCount === 10) {
+          lastResult.textContent = '!!!GAME OVER!!!';
+          lowOrHi.textContent = '';
+          setGameOver();
+        } else {
+          lastResult.textContent = 'Wrong!';
+          lastResult.style.backgroundColor = 'red';
+          if(userGuess < randomNumber) {
+            lowOrHi.textContent = 'Last guess was too low!' ;
+          } else if(userGuess > randomNumber) {
+            lowOrHi.textContent = 'Last guess was too high!';
+          }
+        }
+
+        guessCount++;
+        guessField.value = '';
+        guessField.focus();
+      }
+
+      guessSubmit.addEventListener('click', checkGuess);
+
+      function setGameOver() {
+        guessField.disabled = true;
+        guessSubmit.disabled = true;
+        resetButton = document.createElement('button');
+        resetButton.textContent = 'Start new game';
+        document.body.appendChild(resetButton);
+        resetButton.addEventListener('click', resetGame);
+      }
+
+      function resetGame() {
+        guessCount = 1;
+        const resetParas = document.querySelectorAll('.resultParas p');
+        for(let i = 0 ; i < resetParas.length ; i++) {
+          resetParas[i].textContent = '';
+        }
+
+        resetButton.parentNode.removeChild(resetButton);
+        guessField.disabled = false;
+        guessSubmit.disabled = false;
+        guessField.value = '';
+        guessField.focus();
+        lastResult.style.backgroundColor = 'white';
+        randomNumber = Math.floor(Math.random() * 100) + 1;
+      }
+    </script>
+</body>
+</html>

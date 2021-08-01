@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>ユーザーとグループの権限</title>
+<meta http-equive="content-type" charset="utf-8">
+<link rel="icon" href="/img/favicon.ico">
+<link rel="stylesheet" href="/css/simple.css">
+</head>
+<body>
+<p><a href="./">戻る</a>
+<h1>ユーザーとグループ, ファイルの権限の設定</h1>
+<p> Oct 31, 2020
+<p> サーバーではセキュリティ上rootユーザーになんでもやらせるのではなく, アプリケーションごとにユーザーを用意して権限を管理する方法が一般的だ. 例えばwebサーバーではあるディレクトリにだけ書き込み権限を許可したりする. 
+<h2>ユーザー, グループの管理</h2>
+<p> まずユーザー, グループを確認するには /etc/passwd /etc/group を見れば良い. 
+<p> ユーザーを追加するにはuseraddを使う. -mでホームディレクトリ生成
+<pre>
+<code>
+useradd -m zaief 
+</code>
+</pre>
+
+<p> ユーザーを削除するにはuserdelを使う. -rでホームディレクトリ, メールスプール(/var/log/mail/ユーザー名)も削除
+<pre>
+<code>
+userdel -r zaief
+</code>
+</pre>
+
+<p> パスワードを設定するにはpasswdを使う. passwdのみだとログインユーザーのパスワード変更, passwd ユーザー名 で指定したユーザー名のパスワード変更.
+<pre>
+<code>
+passwd zaief
+</code>
+</pre>
+
+<p> グループを作成するにはgroupadd, グループ削除にはgroupdelを使う.
+<pre>
+<code>
+groupadd www
+groupdel www
+</code>
+</pre>
+
+<p> グループ名やIDを変更するにはgroupmodを使う. -nで名前変更, -gでID変更
+<pre>
+<code>
+groupmod -n newgroup oldgroup
+groupmod -g 1111 somegroup
+</code>
+</pre>
+
+
+<h2>ファイルの権限の管理</h2>
+<p> ファイルに対しては, 所有権, 操作権限によってユーザーに対するファイル操作の権限が決まる.
+<h3>ファイルの所有権</h3>
+<p> ls -l でユーザー名:グループ名 というようにファイルごとに所有権がどうなっているのかがわかる.
+<p> chownで所有権変更. ユーザーをzaief, グループをwwwに変更. 
+<pre>
+<code>
+chown zaief:www somefile 
+</code>
+</pre>
+<p> ディレクトリに対しては, -Rオプションを使うことでディレクトリ以下のファイルの所有権全てを一括で変更できる.
+<pre>
+<code>
+chown -R zaief:www somedir
+</code>
+</pre>
+<p> ファイルにSGIDを設定すると, そのグループの所有権でファイルを実行する. ディレクトリにSGIDを設定すると, ディレクトリ内部で作成されたファイルはSGIDで指定したグループとして所有権が割り当てられる. ls -lをすると, SGIDが設定されたファイルやディレクトリはdrwxr-s-r-xのように, sという権限がグループの実行権限として出てくる.
+<p> chmodでディレクトリのSGIDを設定できる.
+<pre>
+<code>
+chmod 2755 somedir
+</code>
+</pre>
+<p> またはg+sオプションでも設定できる.
+<pre>
+<code>
+chmdo g+s somedir
+</code>
+</pre>
+<p> SGID権限を剥奪したい場合は, 755で指定する, もしくはg-sオプションを使う.
+<pre>
+<code>
+chmod 755 somedir
+もしくは
+chmod g-s somedir
+</code>
+</pre>
+<p> SGIDなファイルを探すには:
+<pre>
+<code>
+find / -perm -2000
+</code>
+</pre>
+<p> SGIDについては<a href="https://qiita.com/aosho235/items/16434a490f9a05ddb0dc">Linux: SUID、SGID、スティッキービットまとめ</a> が参考になる.
+
+<h3>操作権限</h3>
+<p> ファイルやディレクトリの操作権限は rwxrwxrwx で表示され, ユーザー, グループ, その他のユーザーの操作権限を表している. chmodなどでは777のように3つの数字(8進数)で指定する. よく使う数字は7, 5, 4で, 7は全て許可, 5は読み込み, 実行を許可, 4は読み込みのみ許可.  
+<p> chgrp(change group)はグループ, chmod(change mode)はディレクトリのアクセス権をそれぞれ変更する.
+
+<p> chmodは数字でよく指定する. -Rをつけるとディレクトリごと変更.
+<pre>
+<code>
+chmod 755 hoge.txt 
+chmod -R 755 somedirectory
+</code>
+</pre>
+
+</body>
+</html>

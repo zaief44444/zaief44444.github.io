@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>シェーダー</title>
+<meta http-equive="content-type" charset="utf-8">
+<link rel="stylesheet" href="/css/hljs.css">
+<link rel="icon" href="/img/favicon.ico">
+</head>
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/tomorrow-night-blue.min.css">
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/highlight.min.js"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+<link rel="stylesheet" href="/css/hljs.css">
+
+<body>
+<p><a href="./">戻る</a>
+<h1>シェーダー</h1>
+<p> June 26, 2020
+<p> シェーダーとはGPUで動くプログラムのことで, GLSLというc言語のようなものを書くことになる. 一つ一つのシェーダーはごく簡単なことしか行わずそれを積み重ねていく. シェーダー間はin, out で情報をやり取りする. uniform typeはfアプリケーションとの通信を行う. vertex shaderはvertex dataから直接inputとして受け取る. fragment shader はvec4 colorをoutとして出力する必要がある. 
+<p> vertex shader, location = 0 はattrubute locationを0にセットする. この方法の他に, glGetAttribLocationでlocationの値を取得する方法もある. 
+<pre>
+<code>
+#version 330 core
+layout (location = 0) in vec3 aPos; // the position variable has attribute position 0
+  
+out vec4 vertexColor; // specify a color output to the fragment shader
+
+void main()
+{
+    gl_Position = vec4(aPos, 1.0); // see how we directly give a vec3 to vec4's constructor
+    vertexColor = vec4(0.5, 0.0, 0.0, 1.0); // set the output variable to a dark-red color
+}
+</code>
+</pre>
+<p> fragment shader
+<pre>
+<code>
+#version 330 core
+out vec4 FragColor;
+  
+in vec4 vertexColor; // the input variable from the vertex shader (same name and same type)  
+
+void main()
+{
+    FragColor = vertexColor;
+} 
+</code>
+</pre>
+
+<h2>Uniforms</h2>
+<p> uniformsはシェーダープログラム内でグローバル. 
+<pre>
+<code>
+#version 330 core
+out vec4 FragColor;
+  
+uniform vec4 ourColor; // we set this variable in the OpenGL code.
+
+void main()
+{
+    FragColor = ourColor;
+}   
+</code>
+</pre>
+<p> 次のようにしてアプリケーション間で通信できる.
+<pre>
+<code>
+float timeValue = glfwGetTime();
+float greenValue = (sin(timeValue) / 2.0f) + 0.5f;
+int vertexColorLocation = glGetUniformLocation(shaderProgram, "ourColor");
+glUseProgram(shaderProgram);
+glUniform4f(vertexColorLocation, 0.0f, greenValue, 0.0f, 1.0f);
+</code>
+</pre>
+</body>
+</html>

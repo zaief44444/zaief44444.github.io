@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>PPU</title>
+<meta http-equive="content-type" charset="utf-8">
+<link rel="icon" href="/img/favicon.ico">
+<link rel="stylesheet" href="/css/simple.css">
+</head>
+
+<body>
+<p><a href="./">戻る</a>
+<h1>PPU</h1>
+<p> Oct 2, 2020
+<p> <a href="http://taotao54321.hatenablog.com/entry/2017/04/11/115205">NES 基礎知識 - PPU</a> がわかりやすい.
+<p> PPU's io register: $2000-$2007 $4014
+<p> PPUも64kBのアドレス空間をもちVRAMというが, 実質16kBで他はミラー. V$0000-V$3FFF, $2006,$2007でアドレス指定 $2000のbit2でインクリメント幅が1か32. カラーパレットではまた別. Image Palette $3F00-3F9F, Sprite Palette $3F10-3F1F.
+<p> $2002: PPU status register Read Only (Read OnlyとはCPU側から見て. CPUが中心の立場で考えている.) bit7 V-Blank, bit4 accept writes to VRAM
+<p> $4014: DMA stealing cpu cycle 直接PPUからCPUへ 
+
+<table border>
+  <tr>
+    <th>Address</th>
+    <th>内容</th>
+  </tr>
+  <tr>
+    <td>$0000-$0FFF</td>
+    <td>Pattern Table 0</td>
+  </tr>
+  <tr>
+    <td>$1000-$1FFF</td>
+    <td>Pattern Table 1</td>
+  </tr>
+  <tr>
+    <td>$2000-$23BF</td>
+    <td>Name Table 0</td>
+  </tr>
+  <tr>
+    <td>$23C0-$23FF</td>
+    <td>Attribute Table 0</td>
+  </tr>
+  <tr>
+    <td>$2400-$27BF</td>
+    <td>Name Table 1</td>
+  </tr>
+  <tr>
+    <td>$27C0-$2800</td>
+    <td>Attribute Table 1</td>
+  </tr>
+  <tr>
+    <td>$2800-$2BBF</td>
+    <td>Name Table 2</td>
+  </tr>
+  <tr>
+    <td>$2BC0-$2BFF</td>
+    <td>Attribute Table 2</td>
+  </tr>
+  <tr>
+    <td>$2C00-$2FBF</td>
+    <td>Name Table 3</td>
+  </tr>
+  <tr>
+    <td>$2FC0-$2FFF</td>
+    <td>Attribute Table 3</td>
+  </tr>
+  <tr>
+    <td>$3000-$3EFF</td>
+    <td>Mirrors $2000-$2EFF</td>
+  </tr>
+  <tr>
+    <td>$3F00-$3F0F</td>
+    <td>Image Palette</td>
+  </tr>
+  <tr>
+    <td>$3F10-$3F1F</td>
+    <td>Sprite Palette</td>
+  </tr>
+  <tr>
+    <td>3F20-$3FFF</td>
+    <td>Mirrors $3F00-$3F1F(8倍)</td>
+  </tr>
+
+  <tr>
+    <td>$4000-$FFFF</td>
+    <td>Mirrors $0000-$3FFF(4倍)</td>
+  </tr>
+</table>
+<p> 覚え方: Pattern Tableの大きさそれぞれ0x1000, Name Table で0x400弱, 残りでAttribute Table, これが4回繰り返されて合計0x1000, さらにこれをミラーで0x1000弱($2000-$2EFFまでしかミラーされない). Palette 0x10ずつ, ミラーで8倍これで0x100, さらに巨大なミラーで$0000-$3FFFを4倍. よって実質は16kBしか持っていない. 実際, PPUアドレスバスも14bitだけとなる. 
+
+<p> VBlank, つまりスキャンラインが終わりから次の開始までの隙間時間にVRAMに描画データを更新する. さもないと描画中に更新することになり千切りが起きる. PPUメモリは16bitだが, PPU IO レジスターは8-bitしかないのでアドレスを指定するために hi, lowの順番で$2006に書き込まなくてははならない. $2006を使って指定したPPUアドレスデータは$2007に同期され, ここからPPUアドレスのデータを読み込んだり書き込んだりできる. 書き込むたびに, アドレスは自動的にインクリメントされる. そのインクリメント幅は$2000のbit2で指定され, bit2=0ならば1, bit2=1ならば32ずつインクリメントされる. 
+
+<p> PPUの IO レジスタは $2000-$2007, $4014 (DMA)である. $2000-$2007は$2008-$3FFFまでミラーされる. つまり, 2^13/8 = 2^10 = 1024倍ミラーとなっている. $2000,$2001はPPU Control Register 1,2であり, 
+<p> $2000のbit7が1だとVBlankでNMI割り込みが発生する. ステータスレジスタPにも割り込み制御のフラグがあるが, これはこれはMaskable, つまり通常のIRQに対するdisableのフラグであり, NMI(Non Maskable Interrupt)はより強制的であるためPレジスタでは制御できない. $2000のbit7を0にすることでVBlankでNMI割り込みを発生させない.
+<p> $2000のbit5 = 0なら8x8, bit5 = 1なら8x16スプライト使用.
+<p> $2001のbit3 = 0/1でバックグラウンド無効/有効, bit4 = 0/1でスプライト無効/有効
+<p> $2002はPPU Status Registerでread only. PPUの状態をCPUに伝える. bit7 が1のときVBlankが発生中. bit4 = 0/1 でVRAMへの書き込み無効/有効
+
+<p> CPU IOレジスタを通してPPUとのやりとりの流れがわかったところで, 具体的にPPUのメモリの役割を説明する.
+<p> 1つのタイルごとに8x8x2bit=16byte, それがBGで256個, スプライトで256個でPPUの$0000から$1FFFが使われる. 
+<p> パレットは1つで4byteであり, 1byteで一色指定(0-52までの値で指定). BGで4パレット, スプライトで4パレット使う. しかし, 実際にはBGパレットの最初の色($3F00,$3F04,$3F08,$3F0C)は背景色で共通なため背景は16色でなく12+1=13色, スプライトパレットも最初の色($3F10,$3F14,$3F18,$3F1C)は透明色となるため16色でなく12色のみ使用可能. 
+
+<p> ネームテーブルは各座標に対応するタイルを指定している. ネームテーブル一つで256x240pixel画面を構成できる. タイルは8x8であり, 32 * 30個並べる. BGタイルは256個であったので, 1byteでBGタイルを指定できる. 属性テーブルからは色情報. パレットからも色情報 30 * 32byte はちょうどネームテーブルの大きさに一致.
+<p> 属性テーブルは64byteであり, 各byteで4x4 = 16 個のタイルに対して色情報を与える. この16個のタイルをタイルグループとして, このタイルグループはさらに2x2 = 4個のタイルをサブタイルグループとしてサブタイルグループを4つ並べたものと見ることができる. 1byteのうち各2bitで1つのサブタイルグループに使うパレットを指定する. BGに対して4つパレットが用意されている. つまりサブタイルグループでは同じパレットを共有することになる. 
+<p> NESでは2つのネームテーブル, 属性テーブルしか用意できず, 残りの2つはミラーリングによるものである.
+
+
+<h2>スプライト</h2>
+<p> PPUはさらに256byteのObject Attrubte Memory というを持つ.  $2003(OAMADDR)でアドレス, $2004(OAMDATA)でデータのやりとりをする. 4byteで1つのスプライトの情報が入る
+<p> byte0:y座標
+<p> byte1:パターンテーブルのインデックス
+<p> byte2:スプライトの属性:bit0-1 パレットインデックス, bit5:1のときBGよりも優先, bit6:スプライトを|反転, bit7:スプライトを-反転.
+<p> byte3:x座標
+<p> 8x16のときは少し複雑になる. byte1が偶数の時, パターンテーブル$0000が使われ, 奇数の時$1000が使われる. 
+<p> $4014(DMA)で直接書き込める.
+<p> SPR-RAM(OAM)の最初の位置に近いほど優先度が高い. 1つのラインに8個までスプライトを描画可能. $2002のbit5で満杯になったことを知らせる.
+
+<h2>パレット</h2>
+<p> <a href="http://wiki.nesdev.com/w/index.php/PPU_palettes">http://wiki.nesdev.com/w/index.php/PPU_palettes</a> nesdev wiki がやや難しい解説.
+<table border>
+  <tr>
+    <th>Address</th>
+    <th>内容</th>
+  </tr>
+  <tr>
+    <td>$3F00</td>
+    <td>Universal background color</td>
+  </tr>
+  <tr>
+    <td>$3F01-$3F03</td>
+    <td>Background palette 0</td>
+  </tr>
+  <tr>
+    <td>$3F05-$3F07</td>
+    <td>Background palette 1</td>
+  </tr>
+  <tr>
+    <td>$3F09-$3F0B</td>
+    <td>Background palette 2</td>
+  </tr>
+  <tr>
+    <td>$3F0D-$3F0F</td>
+    <td>Background palette 3</td>
+  </tr>
+  <tr>
+    <td>$3F11-$3F13</td>
+    <td>Sprite palette 0</td>
+  </tr>
+  <tr>
+    <td>$3F15-$3F17</td>
+    <td>Sprite palette 1</td>
+  </tr>
+  <tr>
+    <td>$3F19-$3F1B</td>
+    <td>Sprite palette 2</td>
+  </tr>
+  <tr>
+    <td>$3F1D-$3F1F</td>
+    <td>Sprite palette 3</td>
+  </tr>
+</table>
+<p> 各パレットは3色持つ. BGの16x16の領域にbackdrop colorとBackground paletteどれか1つの3色が使える. パレットは属性テーブルで指定される. 
+<p> $3F04/$3F08/$3F0Cはデータを持てるが, PPUでは通常使われない.
+<p> $3F10/$3F14/$3F18/$3F1Cは$3F00/$3F04/$3F08/$3F0Cのミラーとなっている. SMBでは$3F10にback drop colorを書き込むことで空色にしているので, ここを実装しないと真っ暗闇になる.
+
+<p> 32byteなので次の5bitでその役割を示すと:
+<pre>
+<code>
+43210
+|||||
+|||++- Pixel value from tile data
+|++--- Palette number from attribute table or OAM
++----- Background/Sprite select
+</code>
+</pre>
+
+<p> NTSCではYIQの表色系を利用しており, nesではRGBではなく直接NTSC信号を生成するので再現はテレビによってまちまちだが, パレットの1色(1byte)では次で色の表示を決めている. これをRGBに変換するには6bit, つまり0x00-0x3Fに対してRGB色を対応させる64色をあらかじめ用意する, というのが一つの方法だ. エミュによってはこのRGB色の対応のさせ方を様々に選ぶことができる. この対応のさせ方をフィルターと言ったりする.
+<pre>
+<code>
+76543210
+||||||||
+||||++++- Hue (phase, determines NTSC/PAL chroma)
+||++----- Value (voltage, determines NTSC/PAL luma)
+++------- Unimplemented, reads back as 0
+</code>
+</pre>
+
+<p> Hue $0 は明るいグレー, $1-$Cは青から赤へ, そして緑, シアンへ. $Dは暗いグレー, $E-$Fは$1D(黒)のミラー. 正式な黒は$0Fまたは$1Dであり, $0Dは黒より暗い色というシグナルとなり問題があるので使われない. <a href="https://nesdoug.com/2018/09/05/05-palettes/">https://nesdoug.com/2018/09/05/05-palettes/</a> で紹介されている動画で問題を確認できる.
+<p> 2C02 RF Famicom, AV Famicom, NES (both front and top-loading), North American version of the Sharp Nintendo TVは2C02PPUを使用.
+
+<h2>レジスタ</h2>
+<p> PPU関連のレジスタは$2000-$2007まである. 
+<p> $2000 PPUCTRL write
+<table border>
+  <tr>
+    <th>bit</th>
+    <th>内容</th>
+  </tr>
+  <tr>
+    <td>1-0</td>
+    <td>Base name table address(0=$2000; 1=$2400; 2=$2800; 3=$2C00)</td>
+  </tr>
+  <tr>
+    <td>2</td>
+    <td>VRAM address increment per CPU read/write of PPUDATA (0: add 1, going across; 1 : add 32, going down)</td>
+  </tr>
+  <tr>
+    <td>3</td>
+    <td>Sprite pattern table address for 8x8 sprite(0:$1000; 1:$1000; ignored in 8x16 mode)</td>
+  </tr>
+  <tr>
+    <td>4</td>
+    <td>Background pattern table address(0:$0000; 1:$10000)</td>
+  </tr>
+  <tr>
+    <td>5</td>
+    <td>Sprite size (0: 8x8 pixels; 1:8x16 pixels)</td>
+  </tr>
+  <tr>
+    <td>6</td>
+    <td>PPU master/slave select(0:read backdrop from EXT pins; 1:output color on EXT pins)</td>
+  </tr>
+  <tr>
+    <td>7</td>
+    <td>Generate an NMI at the start of the vertical blanking interval(0:off; 1:on)</td>
+  </tr>
+</table>
+
+<p> PPUがvertical blankでありPPUSTATUS($2002)のvblank flagがsetされている時, $2000のbit7 NMI flagを0から1にすると即座にNMI割り込みが発生する. vblank の残り時間が少ない時にこれをすると描画エラーを巻き起こす.
+<h2>マッピング</h2>
+<p> マッピングでPPUアドレス空間はさらに別の場所へ割り当てられたりする.
+<p> $0000-$1FFFはCHR-ROMやCHR-RAMへ. バンクスイッチを伴うことが多く広い空間で扱える.
+<p> $2000-$2FFFは2kB NES internal VRAMへマッピングされることが多い. $2000-$2FFFの半分はミラーであったことを思い出そう. 新たなマッピングによって, 4kBフルに使い, つまり4つのネームテーブルを使うことができる. 
+<p> $3000-$3EFFは$2000-$2EFFのミラーであり, PPUのレンダリングでは使われないためカートリッジが自由な用途で使うことができる. 
+<p> $3F00-$3FFFは変更できず通常通り.
+
+<h2>タイミング</h2>
+<p> 
+
+<pre>
+<code>
+                                         [BBBBBBBB] - Next tile's pattern data,
+                                         [BBBBBBBB] - 2 bits per pixel
+                                          ||||||||
+                                          vvvvvvvv
+      Serial-to-parallel - [AAAAAAAA] &lt- [BBBBBBBB] - Parallel-to-serial
+         shift registers - [AAAAAAAA] &lt- [BBBBBBBB] - shift registers
+                            vvvvvvvv
+                            ||||||||           [Sprites 0..7]----+
+                            ||||||||                             |
+[fine_x selects a bit]----&gt[  Mux   ]--------------------&gt[Priority mux]-----&gt[Pixel]
+                            ||||||||
+                            ^^^^^^^^
+                           [PPPPPPPP] &lt- [1-bit latch]
+                           [PPPPPPPP] &lt- [1-bit latch]
+                                               ^
+                                               |
+                    [2-bit Palette Attribute for next tile (from attribute table)]
+</code>
+</pre>
+
+<p> 各サイクルで, 4つのBG shift registerからbitを取得. どのbitが取得されたかは$2005でセットされるfine X scrollに依存
+</body>
+</html>

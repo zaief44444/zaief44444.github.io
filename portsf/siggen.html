@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>ストリーム生成</title>
+<meta http-equive="content-type" charset="utf-8">
+<link rel="stylesheet" href="/css/hljs.css">
+<link rel="icon" href="/img/favicon.ico">
+</head>
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/tomorrow-night-blue.min.css">
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/highlight.min.js"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+<body>
+  <p><a href="./">戻る</a>
+<h1>ストリーム生成</h1>
+<p>June 3, 2020
+<p>今まではwavファイルから取得したサンプルを変換していたが, 今回からは自前でストリームを生成する. sin波, square波, pulse波などを生成する. 
+<pre>
+<code>
+</code>
+</pre>
+
+<p> バッファはnframesのサイズ, サンプルレート/nframes (+1)がnbufs.
+<p>チェックリスト
+
+<table border>
+<tr>
+<th>項目</th>
+<th>チェック内容</th>
+</tr>
+<tr>
+  <td>Stage1 変数の宣言,初期化</td>
+  <td></td>
+</tr>
+<tr>
+  <td>Stage2 引数処理</td>
+  <td></td>
+</tr>
+<tr>
+  <td>フラグ処理</td>
+  <td>引数の先頭の方にフラグを置くことを前提としていることに注意</td>
+</tr>
+<tr>
+  <td>psf開始</td>
+  <td>psf_init()が成功するか</td>
+</tr>
+<tr>
+  <td>Stage3 読み込み</td>
+  <td></td>
+</tr>
+<tr>
+  <td>wavファィル読み込み</td>
+  <td>psf_sndOpen()が成功したか, rescaleはしないか</td>
+</tr>
+<tr>
+  <td>TODO</td>
+  <td>読み込みファイルが目的に適切かどうか</td>
+</tr>
+<tr>
+  <td>メモリ確保</td>
+  <td>サンプルデータ取得バッファが確保できたか</td>
+</tr>
+<tr>
+  <td>Stage4 出力ファイル</td>
+  <td></td>
+</tr>
+<tr>
+  <td>出力ファイル形式</td>
+  <td>拡張子が適切か, チャンネル数やビット数, サンプルレートの指定</td>
+</tr>
+<tr>
+  <td>出力ファイル生成</td>
+  <td>psf_sndCreate()が成功したか, minheader(4番目の引数)は1にして有効にしたほうがいい</td>
+</tr>
+<tr>
+  <td>Stage5 サウンド処理</td>
+  <td></td>
+</tr>
+<tr>
+  <td>サンプル読み込み</td>
+  <td>psf_sndReadFloatFramesが負の値を返さないか</td>
+</tr>
+<tr>
+  <td>Stage6</td>
+  <td>PEAKチャンクは対応していないソフトが多いので使わないほうがいい</td>
+</tr>
+<tr>
+  <td>Stage7</td>
+  <td>片付け</td>
+</tr>
+</table>
+</body>
+</html>

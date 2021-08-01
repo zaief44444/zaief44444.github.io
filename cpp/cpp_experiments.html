@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>C++の実験記</title>
+<meta http-equive="content-type" charset="utf-8">
+<link rel="stylesheet" href="/css/hljs.css">
+<link rel="icon" href="/img/favicon.ico">
+</head>
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/tomorrow-night-blue.min.css">
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/highlight.min.js"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+<link rel="stylesheet" href="/css/hljs.css">
+<body>
+<p><a href="./">戻る</a>
+<h1>C++の実験記</h1>
+<p>2019年11月</p>
+<p>
+C++の実験など. あまり体系的なまとめ方をしていない.
+</p>
+<h3>stringstream関係</h3>
+<pre><code>
+#include &ltiostream&gt
+#include &ltsstream&gt
+#include &ltstring&gt
+#include &ltiomanip&gt
+using namespace std;
+
+int main() {
+  stringstream ss;
+
+  ss << std::setfill('0');
+  std::cout << ss.str() << "\n";
+
+  return 0;
+}
+</code></pre>
+
+<p>結果はなにも出力されない. </p>
+
+<h3>文脈依存キーワード(contextual keyword)</h3>
+<p>overrideはキーワードではなく文脈依存キーワードなので識別子としても利用可能.</p>
+<pre><code>
+int override = 7;
+
+struct Dx : Base{
+  int override;
+
+  int f() override
+  {
+    return override ::override;
+  }
+};
+</code></pre>
+<p>overrideという識別子がかつて大量に使われていたため互換性を維持する苦肉の策で文脈依存キーワードとなっている. finalも同様.</p>
+
+<h3>public継承など</h3>
+<p>開いているものを閉じることはできるが閉じているものは開くことができない.
+逆ができてしまうと実装の隠蔽が意味をなさなくなってしまう. 大抵必要もないが明示的にpublic継承していて, あれpublic継承ってなんだっけと調べて結局普通に継承するのと同じでは?という徒労に終わる.</p>
+<pre><code>
+class A
+{
+public:
+    int x;
+protected:
+    int y;
+private:
+    int z;
+};
+
+class B : public A
+{
+    // x is public
+    // y is protected
+    // z is not accessible from B
+};
+
+class C : protected A
+{
+    // x is protected
+    // y is protected
+    // z is not accessible from C
+};
+
+class D : private A    // 'private' is default for classes
+{
+    // x is private
+    // y is private
+    // z is not accessible from D
+};
+</code></pre>
+<p>stackoverflowから引用</p>
+
+<h3>継承をまたぐ関数の多重定義</h3>
+<p>実は禁止されている. 一般論から言うとスコープ外では多重定義できない. できない例:</p>
+<pre><code>
+struct Base {
+  void f(int);
+};
+struct Derived : Base {
+  void f(double);
+};
+void use(Derived d)
+{
+  d.f(1); // 1はint型だがdoubleに暗黙変換されDerived::f(double)が呼び出されてしまう
+  Base& br = d;
+  br.f(1); // Base::f(int)
+}
+</code></pre>
+<p>usingを使うことで解決できる:</p>
+<pre><code>
+struct D2 : Base {
+  using Base::f;
+  void f(double);
+};
+void use2(D2 d)
+{
+  d.f(1); // ちゃんとBase::f(int)が呼び出される
+  Base& br = d;
+  br.f(1); //Base::f(int)
+}
+</code></pre>
+
+<h3>仮想関数の返却型緩和</h3>
+<p>仮想関数の返却型は緩和事項があり, BがDの公開基底であるとき元の関数の返却型がB*であれば, オーバーライドする関数の返却型はD*でも良い.
+同様にB&はD&でも良い, この規則は共変返却(covariant return)と呼ばれる. スマートポインターには適用できない. </p>
+<pre><code>
+class Expr {
+  public:
+  Expr();
+  Expr(const Expr&);
+  virtual Expr* new_expr() =0;
+  virtual Expr* clone() =0;
+  // ...
+};
+
+class Cond : public Expr {
+  public:
+  Cond();
+  Cond(const Cond&);
+  Cond* new_expr() override { return new Cond(); }
+  Cond* clone() override { return new Cond(*this); }
+  // ...
+</code></pre>
+<p>コンストラクタはvirtualになれないが, このように間接的にオブジェクトを生成するnew_expr()やclone()は仮想コンストラクタと呼ばれる.</p>
+
+<h3>基底のアクセス制御とdynamiccast</h3>
+<p>基底へのキャストはアップキャストと呼ばれる. 公開基底は暗黙にキャストできるが公開でない場合はエラーとなる. dynamic_castではエラーとならずnullptrを返す.</p>
+<pre><code>
+class BB_ival_slider : public Ival_slider, protected BBslider {
+  // ...
+};
+
+void f(BB_ival_slider* p)
+{
+  Ival_slider* pi1 = p; // OK
+  Ival_slider* pi2 = dynamic_cast&ltIval_slider*&gt(p); // OK
+
+  BBslider* pbb1 = p; // エラー BBsliderは限定公開基底
+  BBslider* pbb2 = dynamic_cast&ltBBslider*&gt(p); // OK: pbb2はnullptrになる
+</code></pre>
+<p></p>
+</body>
+</html>

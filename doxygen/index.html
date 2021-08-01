@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>doxygen解説</title>
+<meta http-equive="content-type" charset="utf-8">
+<link rel="icon" href="/img/favicon.ico">
+<link rel="stylesheet" href="/css/simple.css">
+</head>
+<body>
+<p><a href="../">戻る</a>
+<h1>doxygen解説</h1>
+<p> Mar 12, 2020
+<p> プラグラムの規模が大きくなると依存関係などが煩雑になる. よりプログラムの見通しをよくするためにこのツールを使ってみる.
+<h2>インストール</h2>
+<pre>
+<code>
+brew install doxygen
+brew install graphviz
+</code>
+</pre>
+<h2>設定</h2>
+<p> Doxyfileを生成し, 設定をする. まずソースファイルがあるディレクトリへ行き次のコマンドする.
+<pre>
+<code>
+doxygen -g
+</code>
+</pre>
+<p> Doxyfileを編集する.
+<pre>
+<code>
+HAVE_DOT = YES
+EXTRACT_ALL = YES
+EXTRACT_PRIVATE = YES
+EXTRACT_STATIC = YES
+CALL_GRAPH = YES
+</code>
+</pre>
+<p> 次のコマンドでhtml, latexが生成される
+<pre>
+<code>
+doxygen Doxyfile
+</code>
+</pre>
+
+<h2>参考</h2>
+<a href="https://qiita.com/wakaba130/items/faa6671bd5c954cb2d02">https://qiita.com/wakaba130/items/faa6671bd5c954cb2d02</a> ドキュメント生成コメントの書き方
+<br><a href="https://qiita.com/rubytomato@github/items/51779135bc4b77c8c20d">https://qiita.com/rubytomato@github/items/51779135bc4b77c8c20d</a> graphvizのdot言語ファイルの書き方
+<br><a href="http://www.graphviz.org/documentation/">http://www.graphviz.org/documentation/</a> graphviz公式サイト
+</body>
+</html>

@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>野良ライブラリのビルドと導入</title>
+<meta http-equive="content-type" charset="utf-8">
+<link rel="stylesheet" href="/css/hljs.css">
+<link rel="icon" href="/img/favicon.ico">
+</head>
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/tomorrow-night-blue.min.css">
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/highlight.min.js"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+<link rel="stylesheet" href="/css/hljs.css">
+
+<body>
+<p><a href="./">戻る</a>
+<h1>野良ライブラリのビルドと導入</h1>
+<p> May 21, 2020
+<p> 野良ライブラリのビルド方法について説明する. ライブラリのコンパイルの方法は普通の実行プログラムとは違う. その次に野良ライブラリをどのように導入するのかを説明する. 基本的にMac向けに解説する.
+<h1>ライブラリのビルド</h1>
+<h2>静的ライブラリのビルド</h2>
+<p>実はMacではできないという話がある. Macでは静的実行可能ファイルは存在しないという. システムのライブラリと動的リンクしなくてはならない. よく使うライブラリの再配布は非効率であるため静的リンクが可能なものも使わず基本的に動的リンク, ロードする. 
+<h2>共有ライブラリのビルド</h2>
+<p> <a href="https://kamino.hatenablog.com/entry/c%2B%2B-principle-of-build-library">C/C++のビルドの仕組みとライブラリ</a> の説明がわかりやすい. 
+<p> 一般に共有ライブラリ(動的ライブラリ)と言うものはさらに二つの種類に別れ, 動的リンクライブラリと動的ロードライブラリだ. ファイル形式があるシステムではこの二つが同じなためそれを一緒くたにしている. 
+<p> Macの実行ファイルのフォーマットについてまず知る必要がある. windowsならexeで, linuxならelfと言うがMacではMach-Oと言う. Macでは動的リンクと動的ロードが厳密に区別される. 動的リンクライブラリは.dylibが拡張子で-lfooなどでlibfoo.dylibをリンクできる. 動的ロードライブラリはバンドルと呼ばれ.bundleと言う拡張子が推奨されているが互換性のため.soを使うことも多い. 
+<p> 動的リンクが我々のよく言う動的ライブラリだが, 動的ロードの方がもっと動的で実行時に関数をロードする. よってロードする関数を全く実装していなくてもロードする側はコンパイルできるので, プラグインとして開発ができたりする. 
+<p> 自作のサウンドライブラリmysound.cを作ったとする. これをコンパイルするには, 次のようにする. -dynamiclibオプションをつけること, 接頭辞としてlibをつける, 拡張子をdylibにすると言う3点さえ覚えればいい.
+<pre>
+<code>
+gcc -dynamiclib -o libmysound.dylib mysound.c
+</code>
+</pre>
+<p> Windowsでは次のようにする. オブジェクトファイルを生成してから, -sharedフラグをつけ拡張子をdllにする.
+<pre>
+<code>
+gcc -c mysound.c
+gcc -shared -o mysound.dll mysound.o
+</code>
+</pre>
+
+<h2>インクルードする</h2>
+<p> <a href="https://qiita.com/edo_m18/items/9dfab147482b2ce31840">C/C++のコンパイルについてメモ</a> や <a href="http://www.ysr.net.it-chiba.ac.jp/data/cc.html">http://www.ysr.net.it-chiba.ac.jp/data/cc.html</a>, <a href="https://naruport.com/blog/2019/12/27/c-and-cpp-my-lib-env/">Linux C/C++ 自作ライブラリ作成環境の構築</a> が参考になる.
+<p> 自作ライブラリは/usr/libや/usr/local/libなどシステム標準のディレクトリに直接入れたくはない. ~/include や~/lib ディレクトリを作ってそこに別のディレクトリからシンボリックリンクを張るかコピーする方法がいいだろう. 
+<pre>
+<code>
+ln -sf mysound.h $HOME/include
+ln -sf mysound.dylib $HOME/lib
+</code>
+</pre>
+<p> ソースファイルでインクルードするファイルをすでに指定しているのでコマンドでインクルードするライブラリを指定する必要はない, 代わりにオプションで指定するかインクルードパスを環境変数で通す必要がある.
+<p> オプションの方法について, ヘッダファイルを~/includeに入れた場合.
+<pre>
+<code>
+gcc -c -I$HOME/include main.c
+</code>
+</pre>
+<p> 環境変数を使う方法について, 同様にヘッダファイルを~/includeに入れた場合. まず.bashrcや.zshrcなどにCPATHの設定をする.
+<pre>
+<code>
+export CPATH=$CPATH:$HOME/include
+</code>
+</pre>
+<p> これでオプションにパスを渡さなくてもインクルードできる.
+<pre>
+<code>
+gcc -c main.c
+</code>
+</pre>
+<h2>リンクする</h2>
+<p> ライブラリをインクルードしていても, -lmysoundオプションをつけてリンクするライブラリを明示しなくてはならない. -libmysoundでも良かった気がするが, -lの方が入力も楽なのでこっちを使う. libmysound.dylibを見つられるようライブラリパスをオプションで指定するか環境変数で通す必要がある.
+<p> オプションを使う方法について, -Lパス というオプションを使う. -lmysoundはlibmysound.dylibの接頭辞libをlに省略してもリンクできるのと拡張子は要らない. -libsound.dylibでもリンクできた気がする.
+<pre>
+<code>
+gcc -o main -L$HOME/lib -lmysound main.o
+</code>
+</pre>
+<p> 環境変数でリンクパスを通す方法. .bashrcや.zhsrcなどにLIBRARY_PATHの設定をする.
+<pre>
+<code>
+export LIBRARY=$LIBRARY:$HOME/lib
+</code>
+</pre>
+<p> オプションにパスを渡さなくてもリンクできる.
+<pre>
+<code>
+gcc -o main -lmysound main.o
+</code>
+</pre>
+
+<p> 説明のためにコンパイルとリンクを別の手順として分けたがもちろん一気にやることもできる. 前者の場合.
+<pre>
+<code>
+gcc -o main -I~/include -L~/lib -lmysound main.c
+</code>
+</pre>
+<p> 後者の場合
+<pre>
+<code>
+gcc -o main -lmysound main.c
+</code>
+</pre>
+
+<h2>ロードする</h2>
+<p> リンクしただけでは実はまだ使えず, 実行時にロードできるようにする必要がある. LD_LIBRARY_PATHを使ってロードするライブラリのパスを追加する. 二度手間に思えるかもしれないが, リンクした後にずっとライブラリがその場所に置かれていないといけないというのは不都合が生じることが多い. 
+<pre>
+<code>
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HOME/lib
+</code>
+</pre>
+<p> 動的ロードのDYLD_LIBRARY_PATHと紛らわしい. 
+<p> 環境変数については <a href="http://www2.kobe-u.ac.jp/~lerl2/l_cc_p_10.1.008/doc/main_cls/mergedProjects/bldaps_cls/common/bldaps_env_vars1_comm.htm">環境変数の設定</a> が参考になる. 
+<h2>math.hについて</h2>
+<p> math.hをインクルードしたときは-lmオプションをつける必要がある, と言うことだったがMacでは要らないと言う. <a href="https://hacknote.jp/archives/53903/">C言語 math.hをコンパイルする時に-lmが必要ないとき</a> が参考になる.
+</body>
+</html>

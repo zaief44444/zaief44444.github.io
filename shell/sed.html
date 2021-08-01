@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>sed解説</title>
+<meta http-equive="content-type" charset="utf-8">
+<link rel="icon" href="/img/favicon.ico">
+<link rel="stylesheet" href="/css/simple.css">
+</head>
+<body>
+<p><a href="../">戻る</a>
+<h1>sed解説</h1>
+<p>Apr 2, 2020
+<p>sedは置換コマンドでテキスト操作において最も基本的だが, MacなどのFreeBSD系とLinuxではその挙動が異なる部分がある. ここではLinux向けに解説する. 
+
+<h2>ファイルの内容を置換</h2>
+<p>単一ファイルの内容を変更するときはエディタで行うのが大体速いが, 複数ファイルで同じような処理をするときにはコマンドを使って一括処理する方がいい. 次の例を見てみよう.
+<pre>
+<code>
+hoge.html
+&ltimg src="img/public/1.png"&gt
+&ltimg src="img/public/2.png"&gt
+</code>
+</pre>
+
+<p>この例のディレクトリ構造を変更する
+<pre>
+<code>
+sed -i 's/img\/public/upload/g' hoge.html
+</code>
+</pre>
+<p> 次になる
+<pre>
+<code>
+&ltimg src="upload/1.png"&gt
+&ltimg src="upload/2.png"&gt
+</code>
+</pre>
+<p>ちなみにFreeBSD系では次のコマンドになる
+<pre>
+<code>
+sed -i '' 's/img\/public/upload/g' hoge.html
+</code>
+</pre>
+
+<p> このようにオプションに-iをつけることでファイルの内容を直接変更する. 通常は危険なのでバックアップファイルを生成するオプションもつける. 
+<pre>
+<code>
+sed -i.bk 's/imb\/public/upload/g' hoge.html
+</code>
+</pre>
+
+<p> vimの置換コマンドを使ったことがあればすぐわかる. 末尾のgは一行に複数箇所マッチする文字列がある場合に全部置換してくれる. デフォルトでは一行につき一つまでしか置換してくれない. この仕様は何のためなのかよくわからない.
+
+<p> 複数ファイルの置換をやってみよう. forループの説明をする. 次の例ではiを変数として参照する. ;はコマンドの終わりで区切るために用いられる. forコマンド, doコマンド, doneコマンドと覚えるしかない. doneはここでは末尾のコマンドなので;はいらない. このコマンドによりカレントディレクトリのファイルが表示される. ``はバッククオートでコマンドの実行結果をforの引数として渡すことができる.
+<pre>
+<code>
+for i in `ls -a`; do echo $i ;done 
+#出力結果
+.
+..
+hoge.html
+aaa.html
+hoge2.html
+</code>
+</pre>
+
+<p> 実際に操作したいファイルは一部なので, 次のようにfindを使って絞り込む.
+<pre>
+<code>
+for i in `ls -a | find hoge*`; do echo $i;done
+</code>
+</pre>
+
+<p> sedと組み合わせる
+<pre>
+<code>
+for i in `la -a | find hoge*`; do sed -i 's/img\/public/upload/g' $i;done
+</code>
+</pre>
+
+
+</body>
+</html>

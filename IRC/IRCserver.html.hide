@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>IRCサーバー紹介</title>
+<meta http-equive="content-type" charset="utf-8">
+<link rel="icon" href="/img/favicon.ico">
+<link rel="stylesheet" href="/css/simple.css">
+</head>
+<body>
+<p><a href="./">戻る</a>
+<h1>IRCサーバー紹介</h1>
+<p> Mar 1, 2020
+<p> 日本のIRC利用者が少なくなった現在どのサーバーを選べば良いのかがまずわからなくなる. 海外のサーバーと日本のサーバーで分けて紹介する. 海外では活発なサーバーも多いがいきなり海外向けではなく日本のサーバーで慣れ親しんだ方が良いだろうが, 残念ながら活発なところはほとんどない. 
+
+<h1>海外サーバー</h1> 
+<table border>
+<tr>
+<th bgcolor="#99ee99">通称</th>
+<th bgcolor="#99ee99">ホームページ</th>
+<th bgcolor="#99ee99">サーバー</th>
+</tr>
+<tr>
+<td>Freenode</td>
+<td><a href="https://freenode.net/">https://freenode.net/</a></td>
+<td>chat.freenode.net 6667 or 6697(SSL)</td>
+</tr>
+<tr>
+<td>rizon</td>
+<td><a href="https://www.rizon.net/">https://www.rizon.net/</a></td>
+<td>irc.rizon.net</td>
+</tr>
+<tr>
+<td>grepnet(SSL ONLY)</td>
+<td><a href="https://grepnet.org/">https://grepnet.org/</a></td>
+<td>irc.grepnet.org 6697</td>
+</tr>
+<tr>
+<td>OFTC</td>
+<td><a href="https://www.oftc.net/">https://www.oftc.net/</a></td>
+<td>irc.oftc.net 6667 or 6697(SSL)</td>
+</tr>
+</table>
+
+<h2>各サーバーの詳細</h2>
+<p> Freenode: オープンソース開発者コミュニティのチャンネルが多い. 
+<p> irc.rizon.net: <a href="https://wiki.rizon.net/index.php?title=Main_Page">https://wiki.rizon.net/index.php?title=Main_Page</a> の方が詳しい. insecure: 6660-6670, secure (SSL/TLS): 6697 or 9999
+<p> grepnet: redditで最近紹介している人がいたのでとりあえず貼ってみた. <a href="https://www.reddit.com/r/irc/comments/f9hxpm/irc0securitynet_ircgrepnetorg_ssl_only_software/">https://www.reddit.com/r/irc/comments/f9hxpm/irc0securitynet_ircgrepnetorg_ssl_only_software/</a>
+<p> OFTC: 2001年度末からの老舗.
+<h2>参考</h2> 
+<a href="https://www.mirc.com/servers.html">https://www.mirc.com/servers.html</a>
+<br><a href="https://netsplit.de/networks/top100.php">https://netsplit.de/networks/top100.php</a>
+
+
+<h1>日本サーバー</h1>
+
+<table border>
+<tr>
+<th bgcolor="#99ee99">通称</th>
+<th bgcolor="#99ee99">ホームページ</th>
+<th bgcolor="#99ee99">サーバー・ポート</th>
+</tr>
+<tr>
+<td>Friend Chat IRC</td>
+<td><a href="https://www.friend-chat.jp/">https://www.friend-chat.jp/</a></td>
+<td>irc.friend-chat.jp 6664</td>
+</tr>
+<tr>
+<td>irc.juggler.jp(旧2ch@IRC)</td>
+<td><a href="http://irc2.juggler.jp/">http://irc2.juggler.jp/</a></td>
+<td>irc.juggler.jp 6667</td>
+</tr>
+</table>
+
+<h2>各サーバーの詳細</h2>
+<p> Friend Chat IRC: ネトゲ勢向けのチャンネルが多い. 雑談には不向きかも.
+<p> irc.juggler.jp: IRCクライエントだけでなくWebからもチャットに参加できる. ねらーが好きそうなチャンネルが多い. ホームページよりも <a href="https://wikiwiki.jp/ircjugglerjp/">https://wikiwiki.jp/ircjugglerjp/</a> の方が詳しい.
+</body>
+</html>

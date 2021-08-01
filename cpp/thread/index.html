@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>スレッドプログラミング</title>
+<meta http-equive="content-type" charset="utf-8">
+<link rel="stylesheet" href="/css/hljs.css">
+<link rel="icon" href="/img/favicon.ico">
+</head>
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/tomorrow-night-blue.min.css">
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/highlight.min.js"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+<body>
+<p><a href="../">戻る</a>
+<h1>スレッドプログラミング</h1>
+<p> Mar 27, 2020
+<p> スレッドプログラミングはプログラミングの中でも難しい分野だ. この技術が必要な例としてはサウンドプログラミングの他にIDEのインテリセンスなどが挙げられる. 単に同時進行だけでは実はマルチスレッドにはならない. スレッドプログラミングが必要な場面の大事な特徴は時間による同時進行が不可能だということだ. ゲームではそういう場面が多いがそういうのはゲームエンジンがやってしまうからこれを学ばなくても済んでしまう.マルチメディアプログラミングを自分で処理する必要がある時にこの必要性が出てくるわけだ. 通信も一つのメディアと考えられるが, それはそれでまた大きな分野だ.
+
+<p> スレッドプログラミングは平行プログラミングとも言える. CPUにはスレッド数というものが存在し, 現代のCPUは4スレッド以上持っているものが多い. 8スレッドCPUも手頃なものになった. このようにCPUは一つでもスレッド数分だけ心臓があり, このおかげで平行処理が実現できる. しかしながら通常のプログラミングではこのスレッド数を活かせない. スレッドを使うにはそのためのプログラミングをしなくてはならない. サウンドプログラミングではサウンドカードというCPUと上手く連携を取らなくてはならない, そのためいやでもスレッドプログラミングになる. グラフィックならばGPUと連携しなくてはならないのだからグラフィック処理もスレッドプログラミングとなる. 
+
+<p> <a href="https://www.youtube.com/watch?v=TPVH_coGAQs&list=PLk6CEY9XxSIAeK-EAh3hB4fgNvYkYmghp">https://www.youtube.com/watch?v=TPVH_coGAQs&list=PLk6CEY9XxSIAeK-EAh3hB4fgNvYkYmghp</a> の動画が参考になるが英語なのと動画は基本的にプログラミングの勉強としては手軽ではないのでこれを元に解説をいくつか書いていく. 
+
+
+<h2>Contents</h2>
+<ul>
+<li><a href="intro">Introduction</a></li>
+<li><a href=""></a></li>
+</ul>
+
+
+
+<h2>GBAでの例</h2>
+<p> ところで, GBAはゲームだ. ARM7tdmi RISC チップ, 16.78 MHz (224 cycles/second) のCPUに加えてZ80 CPUも持っている. しかしZ80はGBのために使われるため, 実際はGBAのゲームはARM7tdmiのCPUのみで動く. このCPU一つで一体どうやってマルチメディアプログラミングを実現しているのだろうか. 鍵となるのは割り込みだ. 一定時間に呼び出されるVBlankとHBlank, Vlineでグラフィック処理を行い, IRQによって入力処理を行う. さらにTimerという割り込みによって一定時間後に処理ができたりする. サウンドはおそらくVBlankあたりでやっていると思うが, 私はよくわかっていない. ここで重要なのは入力以外は時間駆動で動いていることだ. シングルスレッドでゲームを実現している. そのためCPUを一つの処理に割くことができないのが大きな制約となっている. 
+
+
+</body>
+</html>

@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>portsfライブラリ</title>
+<meta http-equive="content-type" charset="utf-8">
+<link rel="icon" href="/img/favicon.ico">
+<link rel="stylesheet" href="/css/simple.css">
+</head>
+<body>
+<p><a href="../">戻る</a>
+<h1>portsfライブラリ</h1>
+<p>June 13, 2020
+<p> portsfとはサウンドファイルの読み書きの処理に使えるライブラリでwavファイルを中心に対応している. この処理ではlinsndfileライブラリの方が有名であるが, こちらの方がシンプルな分学習用途として向いている. 作者はThe Audio Programming Bookの著者でありこの本の教材として使っている. だが実用も可能だ. オーディオ特有の処理をこのライブラリを使ってやっていく. 本質的な部分は他のライブラリでも通用する. 
+<p> ソースコードは <a href="https://github.com/bzgeb/portsf">https://github.com/bzgeb/portsf</a> にある. 
+
+<h2>Contents</h2>
+<ul>
+<li><a href="spec">portsfの仕様と導入</a></li>
+<li><a href="norm">ノーマライズ</a></li> 
+<li><a href="breakpoints">breakpointsライブラリ</a></li>
+<li><a href="maintemplate">main.cテンプレート</a></li>
+<li><a href="pan">ステレオパン</a></li>
+<li><a href="env">エンベロープ</a> wavからエンベロープ抽出, wavにエンベロープアンプ適用</li>
+<li><a href="wave">waveライブラリ</a></li>
+<li><a href="env2">エンベロープ2</a> sin波や三角波などストリーム生成, ストリームにエンベロープアンプ適用</li>
+</ul>
+
+<p> portsf周辺のライブラリはどれもCで書かれているため, 本質的でない部分で汚くなっていることがある. bool型でなくint型を使っていたり, エラー処理の場合分けをいちいち書いていたり, 名前空間を使わずどのライブラリの関数を使っているのかわかりにくかったり, ポインター開放の処理など. これらは全てC++で綺麗に改善できるので, そのリファクタリングをしてportsf_cppライブラリなどに今後変えていきたい. portaudioライブラリはC++向けのものが既に用意されている.
+
+</body>
+</html>

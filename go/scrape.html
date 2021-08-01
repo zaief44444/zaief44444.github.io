@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Go言語スクレイピング解説</title>
+<meta http-equive="content-type" charset="utf-8">
+<link rel="stylesheet" href="/css/hljs.css">
+<link rel="icon" href="/img/favicon.ico">
+</head>
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/tomorrow-night-blue.min.css">
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/highlight.min.js"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+<body>
+<p><a href="./">戻る</a>
+<h1>Go言語スクレイピング解説</h1>
+<p> Oct 31, 2020
+<p> ネットで検索というのは情報を得る手段として最も基本的だが, スクレイピングによって他のwebサイトからある情報だけを自動的に抽出することができ, 強力なツールとなり得よう. <a href="https://qiita.com/yosuke_furukawa/items/5fd41f5bcf53d0a69ca6">goqueryでお手軽スクレイピング！</a> が参考になるが, ここでは一つ一つの関数を詳しく解説する.
+<p> <a href="https://qiita.com/Yaruki00/items/b50e346551690b158a79">Goとgoqueryでスクレイピング</a>
+
+
+<p> 例えば東京都港区の天気をスクレイピングしてcsvにデータを保存したいとする. <a href="https://tenki.jp/forecast/3/16/4410/13103/">https://tenki.jp/forecast/3/16/4410/13103/</a> のソースを見てみると, 次のようなタグから10日間の天気の情報がわかる.
+
+<pre>
+<code>
+
+&ltsection class="forecast-point-week-wrap"&gt
+
+  &lth3 class="bottom-style date-set"&gt港区の10日間天気&lt/h3&gt
+  &lttable class="forecast-point-week forecast-days-long"&gt
+    &lttr&gt
+      &ltth class="citydate"&gt日付&lt/th&gt      &lttd class="cityday"&gt
+        &ltp class="date-box"&gt01月02日&lt/p&gt
+        &ltp class="youbi-box"&gt(&ltspan class="saturday"&gt土&lt/span&gt)&lt/p&gt
+      &lt/td&gt
+            &lttd class="cityday"&gt
+        &ltp class="date-box"&gt01月03日&lt/p&gt
+        &ltp class="youbi-box"&gt(&ltspan class="sunday"&gt日&lt/span&gt)&lt/p&gt
+      &lt/td&gt
+            &lttd class="cityday"&gt
+        &ltp class="date-box"&gt01月04日&lt/p&gt
+        &ltp class="youbi-box"&gt(&ltspan&gt月&lt/span&gt)&lt/p&gt
+      &lt/td&gt
+            &lttd class="cityday"&gt
+        &ltp class="date-box"&gt01月05日&lt/p&gt
+        &ltp class="youbi-box"&gt(&ltspan&gt火&lt/span&gt)&lt/p&gt
+      &lt/td&gt
+            &lttd class="cityday"&gt
+        &ltp class="date-box"&gt01月06日&lt/p&gt
+        &ltp class="youbi-box"&gt(&ltspan&gt水&lt/span&gt)&lt/p&gt
+      &lt/td&gt
+            &lttd class="cityday"&gt
+        &ltp class="date-box"&gt01月07日&lt/p&gt
+        &ltp class="youbi-box"&gt(&ltspan&gt木&lt/span&gt)&lt/p&gt
+      &lt/td&gt
+            &lttd class="cityday"&gt
+        &ltp class="date-box"&gt01月08日&lt/p&gt
+        &ltp class="youbi-box"&gt(&ltspan&gt金&lt/span&gt)&lt/p&gt
+      &lt/td&gt
+            &lttd class="cityday"&gt
+        &ltp class="date-box"&gt01月09日&lt/p&gt
+        &ltp class="youbi-box"&gt(&ltspan class="saturday"&gt土&lt/span&gt)&lt/p&gt
+      &lt/td&gt
+            &lttd class="cityday"&gt
+        &ltp class="date-box"&gt01月10日&lt/p&gt
+        &ltp class="youbi-box"&gt(&ltspan class="sunday"&gt日&lt/span&gt)&lt/p&gt
+      &lt/td&gt
+          &lt/tr&gt
+
+    &lttr&gt
+      &ltth class="ships-info"&gt天気&lt/th&gt      &lttd class="weather-icon"&gt&ltimg src="https://static.tenki.jp/images/icon/forecast-days-weather/01.png" alt="晴" title="晴" width="47" height="30"&gt&ltp&gt晴&lt/p&gt&lt/td&gt
+            &lttd class="weather-icon"&gt&ltimg src="https://static.tenki.jp/images/icon/forecast-days-weather/02.png" alt="晴時々曇" title="晴時々曇" width="47" height="30"&gt&ltp&gt晴時々曇&lt/p&gt&lt/td&gt
+            &lttd class="weather-icon"&gt&ltimg src="https://static.tenki.jp/images/icon/forecast-days-weather/12.png" alt="曇のち晴" title="曇のち晴" width="47" height="30"&gt&ltp&gt曇のち晴&lt/p&gt&lt/td&gt
+            &lttd class="weather-icon"&gt&ltimg src="https://static.tenki.jp/images/icon/forecast-days-weather/13.png" alt="曇のち雨" title="曇のち雨" width="47" height="30"&gt&ltp&gt曇のち雨&lt/p&gt&lt/td&gt
+            &lttd class="weather-icon"&gt&ltimg src="https://static.tenki.jp/images/icon/forecast-days-weather/03.png" alt="晴一時雨" title="晴一時雨" width="47" height="30"&gt&ltp&gt晴一時雨&lt/p&gt&lt/td&gt
+            &lttd class="weather-icon"&gt&ltimg src="https://static.tenki.jp/images/icon/forecast-days-weather/05.png" alt="晴のち曇" title="晴のち曇" width="47" height="30"&gt&ltp&gt晴のち曇&lt/p&gt&lt/td&gt
+            &lttd class="weather-icon"&gt&ltimg src="https://static.tenki.jp/images/icon/forecast-days-weather/02.png" alt="晴時々曇" title="晴時々曇" width="47" height="30"&gt&ltp&gt晴時々曇&lt/p&gt&lt/td&gt
+            &lttd class="weather-icon"&gt&ltimg src="https://static.tenki.jp/images/icon/forecast-days-weather/01.png" alt="晴" title="晴" width="47" height="30"&gt&ltp&gt晴&lt/p&gt&lt/td&gt
+            &lttd class="weather-icon"&gt&ltimg src="https://static.tenki.jp/images/icon/forecast-days-weather/01.png" alt="晴" title="晴" width="47" height="30"&gt&ltp&gt晴&lt/p&gt&lt/td&gt
+          &lt/tr&gt
+
+    &lttr&gt
+      &ltth class="ships-info"&gt気温&ltbr&gt(℃)&lt/th&gt      &lttd&gt&ltp class="high-temp"&gt10&lt/p&gt&ltp class="low-temp"&gt1&lt/p&gt&lt/td&gt
+            &lttd&gt&ltp class="high-temp"&gt8&lt/p&gt&ltp class="low-temp"&gt1&lt/p&gt&lt/td&gt
+            &lttd&gt&ltp class="high-temp"&gt9&lt/p&gt&ltp class="low-temp"&gt1&lt/p&gt&lt/td&gt
+            &lttd&gt&ltp class="high-temp"&gt8&lt/p&gt&ltp class="low-temp"&gt2&lt/p&gt&lt/td&gt
+            &lttd&gt&ltp class="high-temp"&gt11&lt/p&gt&ltp class="low-temp"&gt4&lt/p&gt&lt/td&gt
+            &lttd&gt&ltp class="high-temp"&gt9&lt/p&gt&ltp class="low-temp"&gt1&lt/p&gt&lt/td&gt
+            &lttd&gt&ltp class="high-temp"&gt5&lt/p&gt&ltp class="low-temp"&gt1&lt/p&gt&lt/td&gt
+            &lttd&gt&ltp class="high-temp"&gt4&lt/p&gt&ltp class="low-temp"&gt-2&lt/p&gt&lt/td&gt
+            &lttd&gt&ltp class="high-temp"&gt6&lt/p&gt&ltp class="low-temp"&gt-2&lt/p&gt&lt/td&gt
+          &lt/tr&gt
+
+    &lttr&gt
+      &ltth class="ships-info"&gt降水&ltbr&gt確率&lt/th&gt      &lttd&gt&ltp class="precip"&gt0&ltspan class="unit"&gt%&lt/span&gt&lt/p&gt      &lt/td&gt
+            &lttd&gt&ltp class="precip"&gt30&ltspan class="unit"&gt%&lt/span&gt&lt/p&gt      &lt/td&gt
+            &lttd&gt&ltp class="precip"&gt40&ltspan class="unit"&gt%&lt/span&gt&lt/p&gt      &lt/td&gt
+            &lttd&gt&ltp class="precip"&gt80&ltspan class="unit"&gt%&lt/span&gt&lt/p&gt      &lt/td&gt
+            &lttd&gt&ltp class="precip"&gt80&ltspan class="unit"&gt%&lt/span&gt&lt/p&gt      &lt/td&gt
+            &lttd&gt&ltp class="precip"&gt40&ltspan class="unit"&gt%&lt/span&gt&lt/p&gt      &lt/td&gt
+            &lttd&gt&ltp class="precip"&gt40&ltspan class="unit"&gt%&lt/span&gt&lt/p&gt      &lt/td&gt
+            &lttd&gt&ltp class="precip"&gt20&ltspan class="unit"&gt%&lt/span&gt&lt/p&gt      &lt/td&gt
+            &lttd&gt&ltp class="precip"&gt20&ltspan class="unit"&gt%&lt/span&gt&lt/p&gt      &lt/td&gt
+          &lt/tr&gt
+
+  &lt/table&gt&lt!-- /.forecast-point-week --&gt
+
+
+&lt/section&gt
+</code>
+</pre>
+
+<p> タグを抽出するために, doc.Find()によってセレクションを取得する. セレクションとはあるタグで囲まれる部分全体(タグ自身も含める). セレクション.Find()によってさらに深いタグを取得していく. セレクション.Text()によってプレインテキストを取得する. タグの属性はまた別の関数で取得できる.
+<pre>
+<code>
+package main
+
+import (
+    "github.com/PuerkitoBio/goquery"
+    "os"
+		"time"
+		"log"
+		"encoding/csv"
+)
+
+type Result struct {
+    days []string
+		youbis []string
+		weathers []string
+    hightemps []string
+		lowtemps []string
+}
+
+func GetPage(url string) Result {
+	doc, _ := goquery.NewDocument(url)
+	s := doc.Find("table.forecast-point-week").First()
+	tbodies := s.Find("tbody")
+	tbody := tbodies.First()
+	var days []string
+	var youbis []string
+	var weathers []string
+	var hightemps []string
+	var lowtemps []string
+	tbody.Find("td.cityday").Each(func(_ int, s *goquery.Selection) {
+		cityday := s.Find("p.date-box").First().Text()
+		youbi := s.Find("span").First().Text()
+		days = append(days, cityday)
+		youbis = append(youbis, youbi)
+	})
+	tbody.Find("td.weather-icon").Each(func(_ int, s *goquery.Selection) {
+		weather := s.Find("p").First().Text()
+		weathers = append(weathers, weather)
+	})
+	tbody.Find("p.high-temp").Each(func(_ int, s *goquery.Selection) {
+		hightemp := s.Text()
+		hightemps = append(hightemps, hightemp)
+	})
+	tbody.Find("p.low-temp").Each(func(_ int, s *goquery.Selection) {
+		lowtemp := s.Text()
+		lowtemps = append(lowtemps, lowtemp)
+	})
+	return Result{days,youbis,weathers, hightemps,lowtemps}
+}
+
+
+func main() {
+		urls := []string{"https://tenki.jp/forecast/1/2/1400/1100/", "https://tenki.jp/forecast/2/7/3410/4100/", "https://tenki.jp/forecast/3/16/4410/13103/"}
+		locations := []string{"sapporo", "sendai", "minatoku", }
+
+		for index, url := range urls {
+			result := GetPage(url)
+			f ,err := os.Create(time.Now().Local().Format("2006010215") + locations[index])
+			if err != nil {
+				log.Fatal(err)
+			}
+			defer f.Close()
+			w := csv.NewWriter(f)
+			w.Write(result.days)
+			w.Write(result.youbis)
+			w.Write(result.weathers)
+			w.Write(result.hightemps)
+			w.Write(result.lowtemps)
+			w.Flush()
+		}
+	
+}
+
+</code>
+</pre>
+
+<h2>自動で定期的に取得する</h2>
+<p> スクレイピングは自動的処理なので, 当然これを実行するのも自動的に行いたい場合も多い. systemdのデーモンに次のように登録する.
+</body>
+</html>

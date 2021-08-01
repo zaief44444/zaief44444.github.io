@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Goファイル操作</title>
+<meta http-equive="content-type" charset="utf-8">
+<link rel="stylesheet" href="/css/hljs.css">
+<link rel="icon" href="/img/favicon.ico">
+</head>
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/tomorrow-night-blue.min.css">
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/highlight.min.js"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+<body>
+<p><a href="./">戻る</a>
+<h1>Goファイル操作</h1>
+<p> Oct 1, 2020
+<p> Go言語ではosパッケージによってファイル操作を行うことができる. 例としてファイルを開いてバイナリダンプをする.
+
+<p>main.go
+<pre>
+<code>
+package main
+
+import (
+	"fmt"
+	"os"
+	"log"
+)
+
+func main() {
+	file, err := os.Open(os.Args[1])
+	if err != nil {
+		log.Fatalln(err)
+	}
+	bytes := make([]byte,256,256)
+	file.Read(bytes)
+	for i,b := range bytes {
+		fmt.Println(i,":",b)
+	}
+}
+</code>
+</pre>
+
+<p> makeでは(type,len,cap)という形式でメモリを確保する. typeは型, lenは長さ, capは容量. 容量を超える長さを指定するとエラーとなる.
+<p> rangeでは, index,element := という形式で各要素を取り出す. 
+<p> Read関数は配列の長さだけ読み込む.
+<p>ダンプするファイルとして適当にサンプルファイルを作った.
+<p>aaa.txt
+<pre>
+<code>
+abcdefghijklmnopqrstuvwxyz
+ABCDEFGHIJKLMNOPQRSTUVWXYZ
+0123456789
+</code>
+</pre>
+
+<p> 次のコマンドで実行. Args[1]に対応するのがaaa.txtとなる.
+<pre>
+<code>
+go run main.go aaa.txt
+</code>
+</pre>
+
+<p> 実行結果: 長いのでほとんど省略. byteとしての値が出力される.
+<pre>
+<code>
+0 : 97
+1 : 98
+...
+255 : 0
+</code>
+</pre>
+
+<p> fmt.Println()では可変長引数をとるが, このように半角スペースが挿入される. そして呼び出すたびに改行されている.
+<p> Read関数に渡せるのはsliceである. var bytes[256] byteのように固定長の配列を生成しても, Read関数の引数として渡せずエラーとなる. 
+
+
+<h2>同じファイル名のものが既にないか確認する</h2>
+
+<pre>
+<code>
+if _, err := os.Stat(path); os.IsNotExist(err) {
+  //ファイルを生成
+}
+</code>
+</pre>
+</body>
+</html>
