@@ -1,0 +1,20 @@
+body {
+  width: 60em;
+  margin: 0 auto;
+  font-family: Verdana, Tahoma, Arial, sans-serif;
+}
+pre,code{
+  font-family: "source-sans-pro","Menlo",monospace,monospace;
+  font-size:0.95em;
+}
+pre{
+  color:#f5f5f5;
+  background-color:#282a36;
+  border:double;
+  padding:0.2em;
+  line-height:1.5em;
+}
+
+table th {
+  background:#99ee99;
+}

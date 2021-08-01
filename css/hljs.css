@@ -1,0 +1,15 @@
+body {
+  width: 60em;
+  margin: 0 auto;
+  font-family: Verdana, Tahoma, Arial, sans-serif;
+}
+
+pre{
+  font-family: "source-sans-pro", "Menlo", monospace, monospace;
+  font-size:1.1em;
+  line-height:1.2em;
+}
+
+table th {
+  background:#99ee99;
+}
